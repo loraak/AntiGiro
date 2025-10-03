@@ -131,23 +131,14 @@ const Configuration = () => {
   return (
     <div className={styles.container}>
       <div className={styles.wrapper}>
-        {/* Header */}
-        <div className={styles.header}>
-          <div className={styles.headerContent}>
-            <div>
               <h1 className={styles.title}>
-                <Package color="#6366f1" size={36} />
-                Monitoreo del Dipositivo IoT
+                Monitoreo del Prototipo
               </h1>
-            </div>
-          </div>
-        </div>
 
         {/* Alertas Section */}
         {alerts.length > 0 && (
           <div className={styles.alertsSection}>
             <h2 className={styles.alertsTitle}>
-              <Bell size={24} color="#d97706" />
               Alertas del Sistema
             </h2>
             <div className={styles.alertsList}>
@@ -390,7 +381,6 @@ const Configuration = () => {
 
       <div className={styles.card}>
         <div className={styles.header}>
-          <Settings className={styles.icon} />
           <h1 className={styles.title}>Configuración IoT</h1>
         </div>
 

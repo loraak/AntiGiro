@@ -101,7 +101,7 @@ const Reports = () => {
 
     return ( 
         <div className={styles.tableContainer}>
-            <h2 className={styles.tittle}>Historial de Monitoreo</h2>
+            <h2 className={styles.title}>Historial de Monitoreo</h2>
             
             <div className={styles.actionsContainer}>
                 <button onClick={handleDownloadPDF} className={styles.actionButton}>

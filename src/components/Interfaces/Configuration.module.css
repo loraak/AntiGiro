@@ -28,13 +28,14 @@
 }
 
 .title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #1e293b;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 8px 0;
+    color: #14447C;
+    font-size: 36px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
 }
 
 /* Alertas */
