@@ -1,0 +1,284 @@
+.tableContainer { 
+    padding: 20px; 
+    min-height: 100vh; 
+    margin-bottom: 20px; 
+}
+
+.tittle { 
+    text-align: center;
+    color: #2d3748;
+    margin-bottom: 30px; 
+    font-size: 30px; 
+    font-weight: 500; 
+}
+
+.actionsContainer {
+    max-width: 900px; 
+    margin: 0 auto 20px auto;
+    display: flex;
+    justify-content: center;
+}
+
+.actionButton { 
+    background-color: #629460;
+    color: white; 
+    border: none; 
+    border-radius: 6px; 
+    padding: 10px 20px;
+    cursor: pointer; 
+    font-size: 16px; 
+    font-weight: 500; 
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.actionButton:hover { 
+    background-color: #4e7d4a; 
+}
+
+.table { 
+    width: 100%; 
+    max-width: 900px; 
+    margin: 0 auto; 
+    border-collapse: collapse;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px; 
+    overflow: hidden; 
+    border: 1px solid #e2e8f0;
+}
+
+.thead { 
+    background-color: #14447C;
+    color: white; 
+}
+
+.th { 
+    padding: 18px 21px; 
+    text-align: center; 
+    font-weight: 700; 
+    font-size: 15px; 
+}
+
+.tr { 
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s ease;
+}
+
+.tr:hover { 
+    background-color: #f1f5f9;
+}
+
+.td { 
+    padding: 16px 24px; 
+    font-size: 15px; 
+    color: #4a5568;
+}
+
+.estadoBadge { 
+    padding: 8px 10px; 
+    font-size: 15px; 
+    font-weight: 600; 
+    text-align: center;
+}
+
+.estadoActivo { 
+    background-color: #d1fae5;
+    color: #629460;
+}
+
+.estadoInactivo { 
+    background-color: #fee2e2; 
+    color: #D52D3E;
+}
+
+.actionsCell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.editButton, .deleteButton { 
+    border: none; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    margin-right: 5px; 
+    margin-bottom: 5px; 
+    cursor: pointer;
+    color: white; 
+    font-size: 16px; 
+    transition: all 0.2s ease;
+}
+
+.editButton { 
+    background-color: #EFEA5A;
+}
+
+.deleteButton { 
+    background-color: #D52D3E;
+}
+
+
+.reportTable { 
+    width: 100%; 
+    max-width: 1200px; 
+    margin: 0 auto; 
+    border-collapse: collapse;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px; 
+    overflow: hidden; 
+    border: 1px solid #e2e8f0;
+}
+
+.reportFiltersContainer {
+    max-width: 1200px;
+    margin: 0 auto 20px auto;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.reportFilterGroup {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.reportFilterLabel {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.reportFilterIcon {
+    color: #14447C;
+}
+
+.reportFilterSelect, .reportFilterDate {
+    padding: 8px 12px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #4a5568;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+.reportFilterSelect:hover, .reportFilterDate:hover {
+    border-color: #14447C;
+}
+
+.reportFilterSelect:focus, .reportFilterDate:focus {
+    outline: none;
+    border-color: #14447C;
+    box-shadow: 0 0 0 3px rgba(20, 68, 124, 0.1);
+}
+
+.reportTableWrapper {
+    width: 100%;
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.reportNivelContainer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: center;
+}
+
+.reportNivelBar {
+    width: 80px;
+    height: 8px;
+    background-color: #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.reportNivelFill {
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 10px;
+}
+
+.reportNivelText {
+    font-weight: 600;
+    font-size: 13px;
+    min-width: 40px;
+}
+
+.reportEstadoNormal { 
+    background-color: #d1fae5;
+    color: #629460;
+    border-radius: 20px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+.reportEstadoAdvertencia {
+    background-color: #fef3c7;
+    color: #d97706;
+    border-radius: 20px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+.reportEstadoCritico { 
+    background-color: #fee2e2; 
+    color: #D52D3E;
+    border-radius: 20px;
+    display: inline-block;
+    letter-spacing: 0.5px;
+}
+
+.reportViewButton { 
+    border: none; 
+    border-radius: 6px; 
+    padding: 8px 12px;
+    cursor: pointer;
+    color: white; 
+    font-size: 16px; 
+    transition: all 0.2s ease;
+    background-color: #14447C;
+}
+
+.reportViewButton:hover {
+    background-color: #0f3460;
+    transform: scale(1.1);
+}
+
+.reportTableFooter {
+    max-width: 900px;
+    margin: 20px auto 0;
+    padding: 15px 0;
+    text-align: center;
+}
+
+.reportRecordCount {
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .reportFiltersContainer {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .reportFilterGroup {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .reportFilterSelect, .reportFilterDate {
+        width: 100%;
+    }
+}
