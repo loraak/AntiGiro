@@ -9,7 +9,7 @@ const Register = () => {
 
     return ( 
         <div className={styles.tableContainer}>
-            <h2 className={styles.tittle}>Gestión de Empleados</h2>
+            <h2 className={styles.title}>Gestión de Empleados</h2>
             <div className={styles.actionsContainer}>
             <button onClick={() => setIsModalOpen(true)}className={styles.actionButton}>Nuevo Empleado</button>
             </div> 

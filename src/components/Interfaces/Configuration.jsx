@@ -4,27 +4,27 @@ import { Settings, Save, RotateCcw } from 'lucide-react';
 import styles from "./Configuration.module.css";
 
 const Configuration = () => {
-  const [containers, setContainers] = useState([
-      {
-          id: 'ESP32',
-          name: 'Bolsa de Residuos',
-          type: 'Residuos Punzocortantes',
-          location: 'Incubadora La Esperanza',
-          capacity: 5,
-          weight: 1.2,
-          distance: 15,
-          maxDistance: 45,
-          doorOpen: false,
-          lastUpdate: Date.now(),
-          history: []
-      },
-  ]);
-  const [config, setConfig] = useState({
+    const [containers, setContainers] = useState([
+        {
+            id: 'ESP32',
+            name: 'Bolsa de Residuos',
+            type: 'Residuos Punzocortantes',
+            location: 'Incubadora La Esperanza',
+            capacity: 5,
+            weight: 1.2,
+            distance: 15,
+            maxDistance: 45,
+            doorOpen: false,
+            lastUpdate: Date.now(),
+            history: []
+        },
+    ]);
+    const [config, setConfig] = useState({
     pesoMaximo: 1,
     nivelLlenado: 75,
     tiempoApertura: 5,
     sensibilidad: 50
-  });
+});
 
   const [saved, setSaved] = useState(false);
   const [alerts, setAlerts] = useState([]);

@@ -8,7 +8,7 @@
 
     /* Container principal */
     .container {
-    min-height: 84vh;
+    min-height: 96.35vh;
     background: linear-gradient(135deg, #57b959 0%, #cdf0c4 100%);
 
     display: flex;
