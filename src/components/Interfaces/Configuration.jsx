@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertCircle, Clock, Droplets, Bell, Activity, Radio, Magnet } from 'lucide-react';
+import { Package, AlertCircle, Clock, Droplets, Activity, Radio, Magnet } from 'lucide-react';
 import { Settings, Save, RotateCcw } from 'lucide-react';
 import styles from "./Configuration.module.css";
 

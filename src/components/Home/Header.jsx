@@ -1,13 +1,16 @@
 import { Link } from "react-router-dom";
 import styles from "./Header.module.css";
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
+import logo from '../../assets/image.png'; 
 
 const Header = () => { 
     return (
         <header>
             <nav className={styles.header}>
                 <div className={styles.logo}>
-                    <h1>Anti-Giro</h1>
+                    <Link to="/">
+                    <img src={logo} alt="Logo" />
+                    </Link> 
                 </div>
                 <div className={styles.links}> 
                     <Link to="/register">
@@ -19,7 +22,6 @@ const Header = () => {
                     <Link to="/configuration">
                         Dispositivo
                     </Link>
-                    {/*Estas pantallas son de Edén.*/}
                     <Link to="/reports"> 
                         Reportes
                     </Link>
