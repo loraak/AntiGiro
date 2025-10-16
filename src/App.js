@@ -1,11 +1,13 @@
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Header from './components/Home/Header';
 import Home from './components/Home/Home';
 import Register from './components/Interfaces/Admin/Register';
 import Configuration from './components/Interfaces/Configuration';
-import Analysis from './components/Interfaces/Analysis'
+import Analysis from './components/Interfaces/Analysis';
 import Reports from './components/Interfaces/Reports';
-import Login from './components/Auth/Login'; 
+import Login from './components/Auth/Login';
+import ProtectedRoute from './components/ProtectedRoutes'; 
+import { authService } from './services/authService';
 
 function AppContent() {
   const location = useLocation();
@@ -15,12 +17,64 @@ function AppContent() {
     <div className="App">
       {showHeader && <Header />}
       <Routes> 
-        <Route path="/" element={<Home />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/configuration" element={<Configuration />} />
+        {/* Ruta pública de login */}
         <Route path="/login" element={<Login />} />
-        <Route path="/analysis" element={<Analysis />} />
-        <Route path="/reports" element={<Reports />} />
+
+        {/* Rutas protegidas - Cualquier usuario autenticado */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Rutas solo para ADMIN */}
+        <Route 
+          path="/register" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Register />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/configuration" 
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Configuration />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Rutas para ADMIN y TECNICO */}
+        <Route 
+          path="/analysis" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'tecnico']}>
+              <Analysis />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/reports" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'tecnico']}>
+              <Reports />
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Redirigir según autenticación */}
+        <Route 
+          path="*" 
+          element={
+            authService.isAuthenticated() 
+              ? <Navigate to="/" replace /> 
+              : <Navigate to="/login" replace />
+          } 
+        />
       </Routes>
     </div>
   );
@@ -31,7 +85,7 @@ function App() {
     <BrowserRouter>
       <AppContent />
     </BrowserRouter>
-  )
+  );
 }
 
 export default App;

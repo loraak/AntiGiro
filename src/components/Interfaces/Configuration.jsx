@@ -425,26 +425,6 @@ const Configuration = () => {
             </div>
           </div>
 
-          {/* Tiempo de Apertura */}
-          <div className={styles.controlGroup}>
-            <label className={styles.label}>
-              <span>Tiempo de Apertura</span>
-              <span className={styles.value}>{config.tiempoApertura} seg</span>
-            </label>
-            <input
-              type="range"
-              min="1"
-              max="15"
-              value={config.tiempoApertura}
-              onChange={(e) => handleChange('tiempoApertura', Number(e.target.value))}
-              className={styles.slider}
-            />
-            <div className={styles.range}>
-              <span>1 seg</span>
-              <span>15 seg</span>
-            </div>
-          </div>
-
           {/* Sensibilidad de Sensores */}
           <div className={styles.controlGroup}>
             <label className={styles.label}>

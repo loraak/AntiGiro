@@ -12,7 +12,7 @@ import {
     Legend,
     Filler
 } from 'chart.js';
-import { FaChartLine, FaCalendarAlt, FaExclamationTriangle, FaCheckCircle } from 'react-icons/fa';
+import { FaChartLine, FaCalendarAlt, FaCheckCircle } from 'react-icons/fa';
 import styles from './Analysis.module.css';
 
 ChartJS.register(
@@ -136,17 +136,6 @@ const Analysis = () => {
             </div>
 
             <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{backgroundColor: '#fee2e2'}}>
-                        <FaExclamationTriangle style={{color: '#D52D3E'}} />
-                    </div>
-                    <div className={styles.statContent}>
-                        <p className={styles.statLabel}>Contenedores Críticos</p>
-                        <h3 className={styles.statValue}>1</h3>
-                        <p className={styles.statDetail}>Requiere atención inmediata</p>
-                    </div>
-                </div>
-
                 <div className={styles.statCard}>
                     <div className={styles.statIcon} style={{backgroundColor: '#fef3c7'}}>
                         <FaCalendarAlt style={{color: '#d97706'}} />

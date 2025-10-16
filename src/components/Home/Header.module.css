@@ -2,9 +2,15 @@
     display: flex; 
     justify-content: space-between;
     align-items: center; 
-    padding: 20px 30px; 
+    padding: 1rem 2rem; 
     background-color: #14447c;
     height: 80px; 
+}
+
+.logo img {
+    height: 200px;
+    width: 200px;
+    object-fit: contain;
 }
 
 .links {
@@ -32,6 +38,37 @@
     color: white;
 }
 
+.userSection {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.userInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+.userIcon {
+    font-size: 1rem;
+}
+
+.userName {
+    font-weight: 600;
+}
+
+.userRole {
+    opacity: 0.8;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
 .logoutButton { 
     padding: 10px 10px; 
     font-size: 1.5rem; 
@@ -47,8 +84,49 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-.logo img {
-    height: 200px;
-    width: 200px;
-    object-fit: contain;
+/* Responsive */
+@media (max-width: 968px) {
+    .header {
+        height: auto;
+        flex-wrap: wrap;
+        padding: 1rem;
+    }
+
+    .logo img {
+        height: 120px;
+        width: 120px;
+    }
+
+    .links {
+        margin: 0;
+        order: 3;
+        width: 100%;
+        justify-content: center;
+        padding-top: 1rem;
+    }
+
+    .userSection {
+        order: 2;
+        margin-left: auto;
+    }
+
+    .userInfo {
+        font-size: 0.8rem;
+    }
+
+    .userName {
+        display: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .links {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .links a {
+        width: 100%;
+        text-align: center;
+    }
 }
