@@ -1,7 +1,7 @@
-import {Navigate} from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 
-const ProtectedRoute = ({ children, allowedRules = [] }) => {
+const ProtectedRoute = ({ children, allowedRoles = [] }) => { 
     const isAuthenticated = authService.isAuthenticated();
     const userRole = authService.getUserRole();
 
@@ -9,8 +9,8 @@ const ProtectedRoute = ({ children, allowedRules = [] }) => {
         return <Navigate to="/login" />;
     }
 
-    if (allowedRules.length > 0 && !allowedRules.includes(userRole)) {
-        return <Navigate to="/login" />;
+    if (allowedRoles.length > 0 && !allowedRoles.includes(userRole)) {
+        return <Navigate to="/" />;
     }
 
     return children;

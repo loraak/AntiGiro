@@ -1,61 +1,142 @@
-import styles from './Register.module.css'; 
+import { useState, useEffect } from 'react';
+import styles from './Register.module.css';
 import { FaUserEdit } from "react-icons/fa";
-import { MdDelete } from "react-icons/md";
-import {useState} from 'react';
-import AddUser from './AddUser'; 
+import EditUser from './EditUser';
+import AddUser from './AddUser';
+import { usuariosService } from '../../../services/usuarioService'
 
-const Register = () => { 
+const Register = () => {
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [usuarios, setUsuarios] = useState([]);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState('');
 
-    return ( 
+    useEffect(() => {
+        loadUsuarios();
+    }, []);
+
+    const loadUsuarios = async () => {
+        try {
+            setIsLoading(true);
+            setError('');
+            const response = await usuariosService.getAll();
+            setUsuarios(response.data || []);
+        } catch (err) {
+            setError(err.message || 'Error cargando usuarios');
+            console.error('Error cargando usuarios:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleEditClick = (usuario) => {
+        setSelectedUser(usuario);
+        setIsEditModalOpen(true);
+    };
+
+    return (
         <div className={styles.tableContainer}>
             <h2 className={styles.title}>Gestión de Empleados</h2>
             <div className={styles.actionsContainer}>
-            <button onClick={() => setIsModalOpen(true)}className={styles.actionButton}>Nuevo Empleado</button>
+                <button onClick={() => setIsModalOpen(true)}className={styles.actionButton}>Nuevo Empleado</button>
             </div> 
+            
+            {error && (
+                <div className={styles.errorBanner}>
+                    {error}
+                </div>
+            )}
 
-            <table className={styles.table}>
-                <thead className={styles.thead}>
-                    <tr>
-                        <th className={styles.th}> Nombre </th>
-                        <th className={styles.th}> Email </th>
-                        <th className={styles.th}> Teléfono </th>
-                        <th className={styles.th}> Rol </th>
-                        <th className={styles.th}> Estado </th>
-                        <th className={styles.th}> Acciones </th>
-                    </tr>
-                </thead>
-                <tbody className={styles.tbody}>
-                    <tr className={styles.tr}>
-                        <td className={styles.td}>Tenna</td>
-                        <td className={styles.td}>tenna@example.com</td>
-                        <td className={styles.td}>123456789</td>
-                        <td className={styles.td}>Admin</td>
-                        <td className={`${styles.td} ${styles.estadoActivo} ${styles.estadoBadge}`}>Activo</td>
-                        <td className={`${styles.td} ${styles.actionsCell}`}>
-                            <button className={styles.editButton}><FaUserEdit /></button>
-                            <button className={styles.deleteButton}><MdDelete /></button>
-                        </td>
-                    </tr>
-                    <tr className={styles.tr}>
-                        <td className={styles.td}>Spamton</td>
-                        <td className={styles.td}>spamton@example.com</td>
-                        <td className={styles.td}>123456789</td>
-                        <td className={styles.td}>Empleado</td>
-                        <td className={`${styles.td} ${styles.estadoInactivo} ${styles.estadoBadge}`}>Inactivo</td>
-                        <td className={`${styles.td} ${styles.actionsCell}`}>
-                            <button className={styles.editButton}><FaUserEdit /></button>
-                            <button className={styles.deleteButton}><MdDelete /></button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+            {isLoading ? (
+                <div className={styles.loadingContainer}>
+                    <div className={styles.spinner}></div>
+                    <p>Cargando usuarios...</p>
+                </div>
+            ) : (
+                <table className={styles.table}>
+                    <thead className={styles.thead}>
+                        <tr>
+                            <th className={styles.th}>Nombre</th>
+                            <th className={styles.th}>Email</th>
+                            <th className={styles.th}>Rol</th>
+                            <th className={styles.th}>Estado</th>
+                            <th className={styles.th}>Fecha Creación</th>
+                            <th className={styles.th}>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody className={styles.tbody}>
+                        {usuarios.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" className={styles.emptyMessage}>
+                                    No hay usuarios registrados
+                                </td>
+                            </tr>
+                        ) : (
+                            usuarios.map((usuario) => (
+                                <tr key={usuario.id_usuario} className={styles.tr}>
+                                    <td className={styles.td}>{usuario.nombre}</td>
+                                    <td className={styles.td}>{usuario.correo}</td>
+                                    <td className={styles.td}>
+                                        <span className={
+                                            usuario.rol === 'admin' 
+                                                ? styles.rolAdmin 
+                                                : styles.rolTecnico
+                                        }>
+                                            {usuario.rol === 'admin' ? 'Administrador' : 'Técnico'}
+                                        </span>
+                                    </td>
+                                    <td className={styles.td}>
+                                        <span className={`${styles.estadoBadge} ${
+                                            usuario.activo 
+                                                ? styles.estadoActivo 
+                                                : styles.estadoInactivo
+                                        }`}>
+                                            {usuario.activo ? 'Activo' : 'Inactivo'}
+                                        </span>
+                                    </td>
+                                    <td className={styles.td}>
+                                        {new Date(usuario.creado_en).toLocaleDateString('es-MX')}
+                                    </td>
+                                    <td className={`${styles.td} ${styles.actionsCell}`}>
+                                        <button 
+                                            className={styles.editButton}
+                                            onClick={() => handleEditClick(usuario)}
+                                            title="Editar usuario"
+                                        >
+                                            <FaUserEdit />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            )}
 
-            <AddUser
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)} />
+            {selectedUser && (
+                <EditUser
+                    isOpen={isEditModalOpen}
+                    onClose={() => {
+                        setIsEditModalOpen(false);
+                        setSelectedUser(null);
+                    }}
+                    onUserUpdated={loadUsuarios}
+                    usuario={selectedUser}
+                />
+            )}
+
+            {isModalOpen && (
+                <AddUser
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onUserAdded={loadUsuarios}
+                />
+            )   
+            }            
         </div>
-    )
-}
+    );
+};
 
-export default Register; 
+export default Register;
