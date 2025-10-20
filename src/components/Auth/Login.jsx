@@ -24,7 +24,6 @@ const Login = () => {
 
         try {
             const data = await authService.login(email, password);
-            console.log('Login exitoso:', data);
             const userRole = data.usuario.rol;
 
             if (userRole === 'admin') {
