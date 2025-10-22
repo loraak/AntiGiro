@@ -9,15 +9,135 @@
   margin: 0 auto;
 }
 
+.headerSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+
+.lastUpdateText {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.selectorContainer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+  justify-content: center;
+}
+
+.selectorLabel {
+  font-size: 16px;
+  font-weight: 500;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.selectorDropdown {
+  flex-grow: 1;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: white;
+  cursor: pointer;
+}
+
+.selectorDropdown:disabled {
+  background-color: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+  background-color: #275994;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  flex-shrink: 0;
+}
+
+.addButton:hover {
+  background-color: #14447C;
+}
+
+.loadingContainer,
+.errorContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+  background-color: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #14447C;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.errorContainer p {
+  font-size: 18px;
+  color: #ef4444;
+  font-weight: 500;
+  margin: 0;
+}
+
+.retryButton {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: 500;
+  color: white;
+  background-color: #14447C;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retryButton:hover {
+  background-color: #275994;
+}
+
 .title {
-    color: #14447C;
-    font-size: 36px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 15px;
+  color: #14447C;
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
 }
 
 .alertsSection {
@@ -160,19 +280,19 @@
 }
 
 .sensorCardBlue {
-  background:#14447C;
+  background: #14447C;
 }
 
 .sensorCardYellow {
-  background:#D6D135;
+  background: #D6D135;
 }
 
 .sensorCardRed {
-  background:#D52D3E;
+  background: #D52D3E;
 }
 
 .sensorCardGreen {
-  background:#629460;
+  background: #629460;
 }
 
 .sensorHeader {
@@ -246,25 +366,6 @@
   background-color: #059669;
 }
 
-.weightInfo {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-}
-
-.weightLabel {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 0 4px 0;
-}
-
-.weightValue {
-  font-size: 16px;
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0;
-}
-
 .detailPanel {
   background-color: white;
   border-radius: 12px;
@@ -318,22 +419,6 @@
   color: #1e293b;
   font-size: 14px;
   font-weight: 600;
-}
-
-.doorStatus {
-  font-size: 14px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.doorOpen {
-  color: #ef4444;
-}
-
-.doorClosed {
-  color: #00AD4B;
 }
 
 .sensorsBox {
@@ -460,12 +545,6 @@
   max-width: 950px;
   margin: 25px auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.icon {
-  width: 2rem;
-  height: 2rem;
-  color: #14447C;
 }
 
 .controls {
