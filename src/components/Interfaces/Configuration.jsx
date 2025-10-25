@@ -74,9 +74,9 @@ const Configuration = () => {
 
     const container = lectura ? {
         id: `CONT-${lectura.id_contenedor}`,
-        name: selectedContenedor?.nombre || 'Contenedor de Residuos',
+        name: selectedContenedor?.nombre || 'Contenedor de Residuos Default',
         type: 'Residuos Punzocortantes',
-        location: selectedContenedor?.ubicacion || 'Incubadora La Esperanza',
+        location: selectedContenedor?.ubicacion || 'Incubadora La Esperanza Default',
         capacity: config.pesoMaximo,
         weight: lectura.peso,
         lastUpdate: new Date(lectura.timestamp).getTime(),
