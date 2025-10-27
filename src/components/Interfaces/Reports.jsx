@@ -1,89 +1,102 @@
 import styles from './Admin/Register.module.css';
 import { IoMdDownload } from "react-icons/io";
 import { FaEye, FaFilter } from "react-icons/fa";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { GeneratePDF } from "./GeneratePDF";
+import { lecturasService } from '../../services/lecturasService';
 
 const Reports = () => { 
     const [selectedFilter, setSelectedFilter] = useState('todos');
     const [dateFilter, setDateFilter] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isLoadingAlerts, setIsLoadingAlerts] = useState(false);
+    const [alertas, setAlertas] = useState([]);
+    const [alertasFilter, setAlertasFilter] = useState([]);
 
-    const historialData = [
-        {
-            id: 1,
-            fecha: '03/10/2025',
-            hora: '14:30:25',
-            peso: '4.2',
-            nivel: 85,
-            estado: 'Crítico',
-            detalles: 'Contenedor casi lleno - Requiere vaciado'
-        },
-        {
-            id: 2,
-            fecha: '03/10/2025',
-            hora: '09:15:40',
-            peso: '4.1',
-            nivel: 78,
-            estado: 'Normal',
-            detalles: 'Depósito de residuos realizado'
-        },
-        {
-            id: 3,
-            fecha: '03/10/2025',
-            hora: '06:00:12',
-            peso: '3.5',
-            nivel: 72,
-            estado: 'Normal',
-            detalles: 'Lectura programada automática'
-        },
-        {
-            id: 4,
-            fecha: '02/10/2025',
-            hora: '18:45:33',
-            peso: '3.8',
-            nivel: 67,
-            estado: 'Advertencia',
-            detalles: 'Nivel medio alcanzado - Monitoreo continuo'
-        },
-        {
-            id: 5,
-            fecha: '02/10/2025',
-            hora: '12:22:18',
-            peso: '2.3',
-            nivel: 53,
-            estado: 'Normal',
-            detalles: 'Depósito de residuos realizado'
-        },
-        {
-            id: 6,
-            fecha: '02/10/2025',
-            hora: '06:00:08',
-            peso: '2.7',
-            nivel: 48,
-            estado: 'Normal',
-            detalles: 'Lectura programada automática'
-        },
-        {
-            id: 7,
-            fecha: '01/10/2025',
-            hora: '20:10:55',
-            peso: '2.4',
-            nivel: 42,
-            estado: 'Normal',
-            detalles: 'Depósito de residuos realizado'
-        },
-        {
-            id: 8,
-            fecha: '01/10/2025',
-            hora: '15:30:27',
-            peso: '4.9',
-            nivel: 92,
-            estado: 'Crítico',
-            detalles: 'Capacidad máxima alcanzada - Acción inmediata'
+    useEffect(() => {
+        historialAlerts();
+    }, []);
+
+    useEffect(() => {
+        if(!dateFilter) {
+            setAlertasFilter(alertas);
+        } else {
+            const filtered = alertas.filter(alerta => {
+                const alertaFecha = alerta.fecha;
+                const [dia, mes, anio] = alertaFecha.split('/');
+                const alertaDate = `${anio}-${mes}-${dia}`;
+
+                return alertaDate === dateFilter;
+            });
+            setAlertasFilter(filtered);
         }
-    ];
+    }, [dateFilter, alertas]);
 
-    const handleDownloadPDF = () => {
-        alert('Generando reporte PDF...');
+    const historialAlerts = async () => {
+        try {
+            setIsLoadingAlerts(true);
+            const response = await lecturasService.getAlertas(1);
+
+            const alertasTransformadas = response.data.map((alertas, index) => {
+                const fecha = new Date(alertas.timestamp);
+                return {
+                    id: index+1,
+                    fecha: fecha.toLocaleDateString('es-MX'),
+                    hora: fecha.toLocaleTimeString('es-Mx', {hour12: false}),
+                    peso: alertas.peso?.toFixed(1) || 'N/A',
+                    nivel: alertas.nivel || 0,
+                    estado: alertas.nivel >= 80 ? 'Crítico' :
+                        alertas.nivel >= 60 ? 'Advertencia' : 'Normal',
+                    detalles: alertas.alerta?.mensaje || 'Sin alertas'
+                };
+            });
+
+            setAlertas(alertasTransformadas);
+
+        } catch (err) {
+            console.error('Error cargando alertas:', err);
+        } finally {
+            setIsLoadingAlerts(false);
+        }
+    }
+    // Cargar jsPDF y Chart.js cuando el componente se monta
+    useEffect(() => {
+        const scriptPDF = document.createElement('script');
+        scriptPDF.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        scriptPDF.async = true;
+        document.body.appendChild(scriptPDF);
+
+        const scriptChart = document.createElement('script');
+        scriptChart.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js';
+        scriptChart.async = true;
+        document.body.appendChild(scriptChart);
+
+        return () => {
+            document.body.removeChild(scriptPDF);
+            document.body.removeChild(scriptChart);
+        };
+    }, []);
+
+    const handleDownloadPDF = async () => {
+        setIsGenerating(true);
+        
+        // Esperar a que jsPDF y Chart.js estén disponibles
+        const checkLibraries = setInterval(() => {
+            if (window.jspdf && window.Chart) {
+                clearInterval(checkLibraries);
+                GeneratePDF(alertasFilter);
+                setIsGenerating(false);
+            }
+        }, 100);
+
+        // Timeout de seguridad
+        setTimeout(() => {
+            clearInterval(checkLibraries);
+            if (!window.jspdf || !window.Chart) {
+                alert('Error al cargar las librerías. Por favor intenta de nuevo.');
+                setIsGenerating(false);
+            }
+        }, 5000);
     };
 
     const getEstadoClass = (estado) => {
@@ -104,8 +117,12 @@ const Reports = () => {
             <h2 className={styles.title}>Historial de Monitoreo</h2>
             
             <div className={styles.actionsContainer}>
-                <button onClick={handleDownloadPDF} className={styles.actionButton}>
-                    <IoMdDownload /> Descargar Reportes
+                <button 
+                    onClick={handleDownloadPDF} 
+                    className={styles.actionButton}
+                    disabled={isGenerating}
+                >
+                    <IoMdDownload /> {isGenerating ? 'Generando PDF...' : 'Descargar Reportes'}
                 </button>
             </div>
 
@@ -152,7 +169,7 @@ const Reports = () => {
                         </tr>
                     </thead>
                     <tbody className={styles.tbody}>
-                        {historialData.map((registro) => (
+                        {alertasFilter.map((registro) => (
                             <tr key={registro.id} className={styles.tr}>
                                 <td className={styles.td}>{registro.fecha}</td>
                                 <td className={styles.td}>{registro.hora}</td>
@@ -187,11 +204,13 @@ const Reports = () => {
 
             <div className={styles.reportTableFooter}>
                 <p className={styles.reportRecordCount}>
-                    Mostrando {historialData.length} registros
+                    Mostrando {alertasFilter.length} registros
                 </p>
             </div>
         </div>
     )
 }
+
+
 
 export default Reports;
