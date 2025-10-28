@@ -11,6 +11,12 @@ export const contenedoresService = {
         return await apiClient(`/contenedores/usuario/${idUsuario}`, { 
             method: 'GET'
         }); 
+    },
+
+    getOne: async (id) => { 
+        return await apiClient(`/contenedores/${id}`, { 
+            method: 'GET', 
+        }); 
     }, 
 
     create: async (contenedorData) => { 
