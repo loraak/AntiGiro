@@ -29,7 +29,6 @@ const AddUser = ({ isOpen, onClose, onUserAdded }) => {
         setError('');
         setIsLoading(true);
 
-        // Validaciones básicas
         if (!formData.nombre.trim()) {
             setError('El nombre es requerido');
             setIsLoading(false);

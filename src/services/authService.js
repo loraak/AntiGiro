@@ -16,10 +16,15 @@ export const authService = {
             throw new Error(data.message || 'Error al iniciar sesión');
         }
 
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+        const usuarioNormalizado = {
+            ...data.usuario,
+            id_usuario: data.usuario.id_usuario || data.usuario.id
+        };
 
-        return data;
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('usuario', JSON.stringify(usuarioNormalizado));
+
+        return { ...data, usuario: usuarioNormalizado };
     },
 
     logout: () => {
@@ -36,6 +41,11 @@ export const authService = {
         return usuario ? JSON.parse(usuario) : null;
     }, 
 
+    getUsuarioId: () => {
+        const usuario = authService.getUsuario();
+        return usuario ? (usuario.id_usuario || usuario.id) : null;
+    },
+
     isAuthenticated: () => {
         return !!localStorage.getItem('token');
     },
@@ -44,4 +54,4 @@ export const authService = {
         const usuario = authService.getUsuario();
         return usuario ? usuario.rol : null;
     }, 
-}; 
+};

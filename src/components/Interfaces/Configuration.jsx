@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Settings, Save, RotateCcw, Plus } from 'lucide-react';
+import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Settings, Save, RotateCcw, Plus, Edit } from 'lucide-react';
 import styles from "./Configuration.module.css";
 import { useLecturas } from '../../hooks/useLecturas';
 import { contenedoresService } from '../../services/contenedoresService';
 import AddContenedor from '../Interfaces/Admin/AddContenedor';
+import EditContenedor from '../Interfaces/Admin/EditContenedor';
 
 const Configuration = () => {
     const [selectedContenedorId, setSelectedContenedorId] = useState(1);
     const [contenedores, setContenedores] = useState([]);
     const [selectedContenedor, setSelectedContenedor] = useState(null);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [loadingContenedores, setLoadingContenedores] = useState(true);
     
     const { lectura, isLoading, error, lastUpdate, refetch } = useLecturas(selectedContenedorId, 5);
@@ -70,6 +72,11 @@ const Configuration = () => {
     const handleContenedorAdded = () => {
         loadContenedores();
         setIsAddModalOpen(false);
+    };
+
+    const handleContenedorUpdated = () => {
+        loadContenedores();
+        setIsEditModalOpen(false);
     };
 
     const container = lectura ? {
@@ -244,6 +251,15 @@ const Configuration = () => {
                                 </option>
                             ))}
                         </select>
+                        <button
+                            onClick={() => setIsEditModalOpen(true)}
+                            className={styles.addButton}
+                            title="Editar contenedor actual"
+                            disabled={!selectedContenedor}
+                        >
+                            <Edit size={18} />
+                            Editar
+                        </button>
                         <button
                             onClick={() => setIsAddModalOpen(true)}
                             className={styles.addButton}
@@ -560,6 +576,13 @@ const Configuration = () => {
                 isOpen={isAddModalOpen}
                 onClose={() => setIsAddModalOpen(false)}
                 onContenedorAdded={handleContenedorAdded}
+            />
+
+            <EditContenedor
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                contenedor={selectedContenedor}
+                onContenedorUpdated={handleContenedorUpdated}
             />
         </div>
     );

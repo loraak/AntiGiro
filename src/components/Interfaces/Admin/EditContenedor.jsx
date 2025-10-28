@@ -4,12 +4,13 @@ import { contenedoresService } from '../../../services/contenedoresService';
 import { authService } from '../../../services/authService';
 import styles from './AddUser.module.css';
 
-const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
+const EditContenedor = ({ isOpen, onClose, contenedor, onContenedorUpdated }) => {
     const [formData, setFormData] = useState({
         nombre: '',
         ubicacion: '',
         peso_maximo: 5,
         nivel_alerta: 80,
+        activo: 1,
         id_usuario: null
     });
     
@@ -18,26 +19,32 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
     const [isClosing, setIsClosing] = useState(false);
 
     useEffect(() => {
-        const usuario = authService.getUsuario();
-        if (usuario && usuario.id_usuario) {
-            setFormData(prev => ({
-                ...prev,
-                id_usuario: usuario.id_usuario
-            }));
-        }
-    }, []);
-
-    useEffect(() => {
         if (isOpen) {
             setIsClosing(false);
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        if (contenedor && isOpen) {
+            const userId = authService.getUsuarioId();
+            
+            setFormData({
+                nombre: contenedor.nombre || '',
+                ubicacion: contenedor.ubicacion || '',
+                peso_maximo: Number(contenedor.peso_maximo) || 5,
+                nivel_alerta: Number(contenedor.nivel_alerta) || 80,
+                activo: contenedor.activo ?? 1,
+                id_usuario: userId || null
+            });
+            setError('');
+        }
+    }, [contenedor, isOpen]);
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
-            [name]: name === 'peso_maximo' || name === 'nivel_alerta' || name === 'id_usuario' 
+            [name]: name === 'peso_maximo' || name === 'nivel_alerta' || name === 'id_usuario' || name === 'activo'
                 ? Number(value) 
                 : value
         }));
@@ -48,7 +55,7 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
         setTimeout(() => {
             onClose();
             setIsClosing(false);
-        }, 300);
+        }, 300); 
     };
 
     const handleSubmit = async () => {
@@ -72,26 +79,17 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
                 throw new Error('No se pudo obtener el usuario. Por favor, inicia sesión nuevamente.');
             }
 
-            await contenedoresService.create(formData);
-            
-            const usuario = authService.getUsuario();
-            setFormData({
-                nombre: '',
-                ubicacion: '',
-                peso_maximo: 5,
-                nivel_alerta: 80,
-                id_usuario: usuario?.id_usuario || null
-            });
-            
-            onContenedorAdded();
+            await contenedoresService.update(contenedor.id_contenedor, formData);
+            onContenedorUpdated();
         } catch (err) {
-            setError(err.message || 'Error al crear el contenedor');
+            setError(err.message || 'Error al actualizar el contenedor');
         } finally {
             setLoading(false);
         }
     };
 
     if (!isOpen && !isClosing) return null;
+    if (!contenedor) return null;
 
     return (
         <div className={`${styles.modalOverlay} ${isClosing ? styles.closing : ''}`}>
@@ -104,7 +102,18 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
                     <X size={24} />
                 </button>
 
-                <h2 className={styles.modalTitle}>Agregar Nuevo Contenedor</h2>
+                <h2 className={styles.modalTitle}>Editar Contenedor</h2>
+
+                <div className={styles.infoBox}>
+                    <p className={styles.infoText}>
+                        <strong>ID:</strong> CONT-{contenedor.id_contenedor}
+                    </p>
+                    {contenedor.actualizado_en && (
+                        <p className={styles.infoText}>
+                            <strong>Última actualización:</strong> {new Date(contenedor.actualizado_en).toLocaleString('es-MX')}
+                        </p>
+                    )}
+                </div>
 
                 {error && (
                     <div className={styles.errorMessage}>
@@ -172,6 +181,21 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
                     />
                 </div>
 
+                <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                        Estado
+                    </label>
+                    <select
+                        name="activo"
+                        value={formData.activo}
+                        onChange={handleChange}
+                        className={styles.select}
+                    >
+                        <option value={1}>Activo</option>
+                        <option value={0}>Inactivo</option>
+                    </select>
+                </div>
+
                 <div className={styles.buttonContainer}>
                     <button
                         type="button"
@@ -179,7 +203,7 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
                         disabled={loading}
                         className={styles.saveButton}
                     >
-                        {loading ? 'Creando...' : 'Crear Contenedor'}
+                        {loading ? 'Guardando...' : 'Guardar Cambios'}
                     </button>
                 </div>
             </div>
@@ -187,4 +211,4 @@ const AddContenedor = ({ isOpen, onClose, onContenedorAdded }) => {
     );
 };
 
-export default AddContenedor;
+export default EditContenedor;
