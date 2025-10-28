@@ -1,6 +1,6 @@
 import logo from './../../assets/image.png';
 
-export const GeneratePDF = async (historialData) => {
+export const GeneratePDF = async (historialData, contenedorData) => {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
@@ -10,27 +10,77 @@ export const GeneratePDF = async (historialData) => {
 
     // Header
     doc.setFillColor(...greenP);
-    doc.rect(0, 0, 215, 25, 'F'); // Rectángulo que cubre todo el ancho
+    doc.rect(0, 0, 215, 25, 'F');
     
     // Logo
-    doc.addImage(logo, 'PNG', 15, 8, 35, 17);
+    doc.addImage(logo, 'PNG', 15, 5, 35, 17);
     
     // Título del reporte
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.setFont(undefined, 'bold');
-    doc.text('Reporte de Contenedores', 55, 18);
+    doc.text('Reporte de Contenedores', 60, 17);
     
     // Fecha del reporte
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`Fecha: ${new Date().toLocaleString('es-MX')}`, 55, 24);
+    doc.text(`Fecha: ${new Date().toLocaleString('es-MX')}`, 60, 24);
     
-    // Resumen estadístico
+    // ===== TARJETA DE DATOS DEL CONTENEDOR =====
+    const containerCardY = 32;
+    const containerCardWidth = 180;
+    const containerCardHeight = 32;
+    
+    doc.setFillColor(245, 250, 255); // Azul muy claro
+    doc.roundedRect(15, containerCardY, containerCardWidth, containerCardHeight, 2, 2, 'F');
+    doc.setDrawColor(...blueP);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(15, containerCardY, containerCardWidth, containerCardHeight, 2, 2, 'S');
+    
+    // Título de la tarjeta
+    doc.setFontSize(12);
+    doc.setTextColor(...blueP);
+    doc.setFont(undefined, 'bold');
+    doc.text('Información del Contenedor', 17, containerCardY + 6);
+    
+    // Datos en dos columnas
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    
+    // Columna izquierda
+    doc.setFont(undefined, 'bold');
+    doc.text('Nombre:', 17, containerCardY + 14);
+    doc.setFont(undefined, 'normal');
+    doc.text(contenedorData.nombre, 35, containerCardY + 14);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Ubicación:', 17, containerCardY + 20);
+    doc.setFont(undefined, 'normal');
+    doc.text(contenedorData.ubicacion, 35, containerCardY + 20);
+    
+    // Columna derecha
+    doc.setFont(undefined, 'bold');
+    doc.text('Peso máximo:', 110, containerCardY + 14);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${contenedorData.peso_maximo} kg`, 140, containerCardY + 14);
+    
+    doc.setFont(undefined, 'bold');
+    doc.text('Nivel de alerta:', 110, containerCardY + 20);
+    doc.setFont(undefined, 'normal');
+    doc.text(`${contenedorData.nivel_alerta}%`, 140, containerCardY + 20);
+    
+    // Usuario responsable (opcional, centrado abajo)
+    doc.setFontSize(7);
+    doc.setTextColor(...grayText);
+    doc.text(`Responsable: ${contenedorData.nombre_usuario} (${contenedorData.correo_usuario})`, 17, containerCardY + 28);
+    
+    // ===== RESUMEN ESTADÍSTICO =====
+    const statsY = containerCardY + containerCardHeight + 10;
+    
     doc.setFontSize(16);
     doc.setTextColor(0, 0, 0);
     doc.setFont(undefined, 'bold');
-    doc.text('Resumen Estadístico', 15, 43);
+    doc.text('Resumen Estadístico', 15, statsY);
     
     const nivelPromedio = (historialData.reduce((acc, d) => acc + d.nivel, 0) / historialData.length).toFixed(1);
     const pesoPromedio = (historialData.reduce((acc, d) => acc + parseFloat(d.peso), 0) / historialData.length).toFixed(2);
@@ -40,7 +90,7 @@ export const GeneratePDF = async (historialData) => {
     const pesoMin = Math.min(...historialData.map(d => parseFloat(d.peso)));
     
     // Tarjetas de estadísticas (3 columnas)
-    const cardY = 50;
+    const cardY = statsY + 7;
     const cardWidth = 58;
     const cardHeight = 28;
     
@@ -118,7 +168,7 @@ export const GeneratePDF = async (historialData) => {
                 label: 'Nivel (%)',
                 data: chartData.map(d => d.nivel),
                 borderColor: '#14447C',
-                backgroundColor: 'rgba(4, 36, 74, 0.1)',
+                backgroundColor: 'rgba(20, 68, 124, 0.1)',
                 borderWidth: 2,
                 tension: 0.4,
                 fill: true
@@ -155,7 +205,8 @@ export const GeneratePDF = async (historialData) => {
     
     // Agregar gráfica de nivel al PDF
     const imgNivel = canvasNivel.toDataURL('image/png');
-    doc.addImage(imgNivel, 'PNG', 20, 83, 170, 70);
+    const graphY = cardY + cardHeight + 14;
+    doc.addImage(imgNivel, 'PNG', 20, graphY, 170, 70);
     
     // Crear gráfica de peso
     const canvasPeso = document.createElement('canvas');
@@ -205,12 +256,12 @@ export const GeneratePDF = async (historialData) => {
     
     // Agregar gráfica de peso al PDF
     const imgPeso = canvasPeso.toDataURL('image/png');
-    doc.addImage(imgPeso, 'PNG', 20, 168, 170, 70);
+    doc.addImage(imgPeso, 'PNG', 20, graphY + 85, 170, 70);
     
     // Nueva página para la tabla de datos
     doc.addPage();
 
-    // Header de segunda página (simplificado)
+    // Header de segunda página
     doc.setFillColor(...greenP);
     doc.rect(0, 0, 215, 20, 'F');
     doc.setTextColor(255, 255, 255);
@@ -233,10 +284,10 @@ export const GeneratePDF = async (historialData) => {
             doc.setFont(undefined, 'bold');
             doc.text('Detalle de Lecturas', 15, 13);
             
-            y = 25;
+            y = 32;
         }
         
-        // Tarjeta de lectura con sombra
+        // Tarjeta de lectura
         doc.setFillColor(250, 250, 250);
         doc.roundedRect(15, y, 180, 30, 2, 2, 'F');
         
@@ -293,6 +344,7 @@ export const GeneratePDF = async (historialData) => {
         // Detalles
         doc.setFontSize(8);
         doc.setTextColor(...grayText);
+        doc.setFont(undefined, 'normal');
         doc.text(item.detalles || 'Sin detalles adicionales', 18, y + 23);
         
         y += 35;
@@ -305,9 +357,8 @@ export const GeneratePDF = async (historialData) => {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(`Página ${i} de ${pageCount}`, 175, 285);
-        doc.text(``, 15, 285);
     }
     
     // Guardar PDF
-    doc.save(`reporte-sensores-${new Date().getTime()}.pdf`);
+    doc.save(`reporte-${contenedorData.nombre}-${new Date().getTime()}.pdf`);
 };
