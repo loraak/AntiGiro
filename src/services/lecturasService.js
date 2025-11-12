@@ -1,6 +1,6 @@
 import {authService} from './authService'; 
 
-const API_URL = 'http://localhost:3000/api/lecturas'; 
+const API_URL = `${process.env.REACT_APP_API_URL}/lecturas`;
 
 export const lecturasService = { 
     getUltimaLectura: async(idContenedor) => { 
