@@ -3,6 +3,7 @@ import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Settings, Save
 import styles from "./Configuration.module.css";
 import { useLecturas } from '../../hooks/useLecturas';
 import { contenedoresService } from '../../services/contenedoresService';
+import { lecturasService } from '../../services/lecturasService';
 import AddContenedor from '../Interfaces/Admin/AddContenedor';
 import EditContenedor from '../Interfaces/Admin/EditContenedor';
 
@@ -14,6 +15,10 @@ const Configuration = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [loadingContenedores, setLoadingContenedores] = useState(true);
     
+    const [alerts, setAlerts] = useState([]);
+    const [loadingAlerts, setLoadingAlerts] = useState(false);
+    const [alertsError, setAlertsError] = useState(null);
+    
     const { lectura, isLoading, error, lastUpdate, refetch } = useLecturas(selectedContenedorId, 5);
 
     const [config, setConfig] = useState({
@@ -24,7 +29,6 @@ const Configuration = () => {
     });
 
     const [saved, setSaved] = useState(false);
-    const [alerts, setAlerts] = useState([]);
 
     useEffect(() => {
         loadContenedores();
@@ -35,6 +39,23 @@ const Configuration = () => {
             loadContenedorDetails(selectedContenedorId);
         }
     }, [contenedores, selectedContenedorId]);
+
+    useEffect(() => {
+        if (selectedContenedorId) {
+            loadAlertas();
+        }
+    }, [selectedContenedorId]);
+
+    // Recargar alertas cada 30 segundos
+    useEffect(() => {
+        if (selectedContenedorId) {
+            const interval = setInterval(() => {
+                loadAlertas();
+            }, 30000);
+
+            return () => clearInterval(interval);
+        }
+    }, [selectedContenedorId]);
 
     const loadContenedores = async () => {
         try {
@@ -49,6 +70,45 @@ const Configuration = () => {
             console.error('Error cargando contenedores:', err);
         } finally {
             setLoadingContenedores(false);
+        }
+    };
+
+    const loadAlertas = async () => {
+        try {
+            setLoadingAlerts(true);
+            setAlertsError(null);
+            
+            const response = await lecturasService.getAlertas(selectedContenedorId);
+            
+            const alertasFormateadas = [];
+            
+            if (response.data && Array.isArray(response.data)) {
+                response.data.forEach(lectura => {
+                    if (lectura.alerta && lectura.alerta.activo) {
+                        alertasFormateadas.push({
+                            id: `${lectura.id_contenedor}-${lectura.timestamp}-${lectura.alerta.tipo}`,
+                                level: lectura.alerta.tipo === 'sobrepeso' ? 'critical' : 
+                                    lectura.alerta.tipo === 'llenado' ? 'warning' : 
+                                    lectura.alerta.tipo === 'nivel_alto' ? 'warning' : 'warning',
+                            message: lectura.alerta.mensaje,
+                            time: new Date(lectura.timestamp).toLocaleTimeString('es-MX'),
+                            timestamp: lectura.timestamp,
+                            tipo: lectura.alerta.tipo,
+                        });
+                    }
+                });
+            }
+
+            alertasFormateadas.sort((a, b) => 
+                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+            );
+            
+            setAlerts(alertasFormateadas);
+        } catch (err) {
+            console.error('Error cargando alertas:', err);
+            setAlertsError(err.message);
+        } finally {
+            setLoadingAlerts(false);
         }
     };
 
@@ -85,9 +145,9 @@ const Configuration = () => {
         type: 'Residuos Punzocortantes',
         location: selectedContenedor?.ubicacion || 'Incubadora La Esperanza Default',
         capacity: config.pesoMaximo,
-        weight: lectura.peso,
+        weight: lectura.peso || 0,
         lastUpdate: new Date(lectura.timestamp).getTime(),
-        nivel: lectura.nivel,
+        nivel: lectura.nivel || 0,
         doorOpen: !lectura.estado_electroiman,
         alerta: lectura.alerta
     } : null;
@@ -127,6 +187,8 @@ const Configuration = () => {
             
             await loadContenedores();
             
+            await loadAlertas();
+            
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         } catch (err) {
@@ -153,53 +215,6 @@ const Configuration = () => {
         setSaved(false);
     };
 
-    useEffect(() => {
-        if (!lectura) return;
-
-        const newAlerts = [];
-        const percentage = lectura.nivel;
-
-        if (percentage >= 95) {
-            newAlerts.push({
-                id: `${lectura.id_contenedor}-critical`,
-                level: 'critical',
-                container: selectedContenedor?.nombre || 'Contenedor de Residuos',
-                message: 'Capacidad crítica alcanzada - Recolección inmediata requerida',
-                time: new Date().toLocaleTimeString('es-MX')
-            });
-        } else if (percentage >= config.nivelLlenado) {
-            newAlerts.push({
-                id: `${lectura.id_contenedor}-warning`,
-                level: 'warning',
-                container: selectedContenedor?.nombre || 'Contenedor de Residuos',
-                message: 'Nivel alto - Programar recolección pronto',
-                time: new Date().toLocaleTimeString('es-MX')
-            });
-        }
-
-        if (lectura.peso >= config.pesoMaximo) {
-            newAlerts.push({
-                id: `${lectura.id_contenedor}-peso`,
-                level: 'critical',
-                container: selectedContenedor?.nombre || 'Contenedor de Residuos',
-                message: 'Peso máximo alcanzado',
-                time: new Date().toLocaleTimeString('es-MX')
-            });
-        }
-
-        if (lectura.alerta?.activo) {
-            newAlerts.push({
-                id: `${lectura.id_contenedor}-db-alert`,
-                level: lectura.alerta.tipo === 'sobrepeso' ? 'critical' : 'warning',
-                container: selectedContenedor?.nombre || 'Contenedor de Residuos',
-                message: lectura.alerta.mensaje,
-                time: new Date(lectura.timestamp).toLocaleTimeString('es-MX')
-            });
-        }
-
-        setAlerts(newAlerts);
-    }, [lectura, config, selectedContenedor]);
-
     const getStatus = (percentage) => {
         if (percentage >= 95) return 'critical';
         if (percentage >= config.nivelLlenado) return 'warning';
@@ -213,6 +228,18 @@ const Configuration = () => {
             normal: 'Normal'
         };
         return statusMap[status];
+    };
+
+    const getTipoAlertaText = (tipo) => {
+        const tipoMap = {
+            'sobrepeso': 'Sobrepeso',
+            'llenado': 'Nivel de llenado completado',
+            'sensor_error': 'Error en sensor',
+            'mantenimiento': 'Sistema requiere mantenimiento',
+            'bateria_baja': 'Batería baja',
+            'temperatura': 'Temperatura alta'
+        };
+        return tipoMap[tipo] || tipo;
     };
 
     if (isLoading && !lectura) {
@@ -297,7 +324,18 @@ const Configuration = () => {
                     <>
                         {alerts.length > 0 && (
                             <div className={styles.alertsSection}>
-                                <h2 className={styles.alertsTitle}>Alertas del Sistema</h2>
+                                <div className={styles.alertsHeader}>
+                                    <h2 className={styles.alertsTitle}>
+                                        Alertas del Sistema
+                                    </h2>
+                                </div>
+                                
+                                {alertsError && (
+                                    <div className={styles.alertsError}>
+                                        Error cargando alertas: {alertsError}
+                                    </div>
+                                )}
+                                
                                 <div className={styles.alertsList}>
                                     {alerts.map(alert => (
                                         <div
@@ -309,8 +347,11 @@ const Configuration = () => {
                                             <div className={styles.alertContent}>
                                                 <AlertCircle size={20} color={alert.level === 'critical' ? '#ef4444' : '#f59e0b'} />
                                                 <div>
-                                                    <p className={styles.alertContainer}>{alert.container}</p>
-                                                    <p className={styles.alertMessage}>{alert.message}</p>
+                                                    <div className={styles.alertMetadata}>
+                                                        <span className={styles.alertType}>
+                                                            {getTipoAlertaText(alert.tipo)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <span className={styles.alertTime}>{alert.time}</span>
@@ -564,7 +605,7 @@ const Configuration = () => {
 
                             {saved && (
                                 <div className={styles.successMessage}>
-                                    ✓ Configuración guardada correctamente
+                                    Configuración guardada correctamente
                                 </div>
                             )}
                         </div>
