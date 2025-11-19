@@ -47,19 +47,21 @@ const Reports = () => {
         try {
             setIsLoadingAlerts(true);
             const response = await lecturasService.getAlertas(contenedorId); // ✅ Usar el ID del contenedor
+            console.log(response.data);
             const alertasTransformadas = response.data.map((alertas, index) => {
                 const fecha = new Date(alertas.timestamp);
+                console.log('Tipo recibido:', alertas.tipo, 'Tipo de dato:', typeof alertas.tipo);
                 return {
                     id: index+1,
                     fecha: fecha.toLocaleDateString('es-MX'),
                     hora: fecha.toLocaleTimeString('es-Mx', {hour12: false}),
-                    peso: alertas.peso?.toFixed(1) || 'N/A',
-                    nivel: alertas.nivel || 0,
-                    estado: alertas.nivel >= 80 ? 'Crítico' :
-                        alertas.nivel >= 60 ? 'Advertencia' : 'Normal',
+                    peso: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? '5.0' : 'sobrepeso' ? '5.3' : 'N/A',
+                    nivel: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? 100 : 'sobrepeso' ? 100 : 0,
+                    estado: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? 'Crítico' : 'sobrepeso' ? 'Advertencia' :'Normal',
                     detalles: alertas.alerta?.mensaje || 'Sin alertas'
                 };
             });
+            console.log(alertasTransformadas);
             setAlertas(alertasTransformadas);
 
         } catch (err) {
