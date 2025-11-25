@@ -72,7 +72,7 @@ export const GeneratePDF = async (historialData, contenedorData) => {
     // Usuario responsable (opcional, centrado abajo)
     doc.setFontSize(7);
     doc.setTextColor(...grayText);
-    doc.text(`Responsable: ${contenedorData.nombre_usuario} (${contenedorData.correo_usuario})`, 17, containerCardY + 28);
+    doc.text(`Responsable del contenedor: ${contenedorData.nombre_usuario} (${contenedorData.correo_usuario})`, 17, containerCardY + 28);
     
     // ===== RESUMEN ESTADÍSTICO =====
     const statsY = containerCardY + containerCardHeight + 10;

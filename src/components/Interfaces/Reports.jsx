@@ -55,9 +55,9 @@ const Reports = () => {
                     id: index+1,
                     fecha: fecha.toLocaleDateString('es-MX'),
                     hora: fecha.toLocaleTimeString('es-Mx', {hour12: false}),
-                    peso: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? '5.0' : 'sobrepeso' ? '5.3' : 'N/A',
-                    nivel: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? 100 : 'sobrepeso' ? 100 : 0,
-                    estado: alertas.alerta.tipo?.toLowerCase().trim() === 'llenado' ? 'Crítico' : 'sobrepeso' ? 'Advertencia' :'Normal',
+                    peso: alertas.alerta.peso,
+                    nivel: alertas.alerta.nivel,
+                    estado: alertas.alerta.peso === 4.5 ? 'Advertencia' : alertas.alerta.peso > 5.0 ? 'Crítico' :'Normal',
                     detalles: alertas.alerta?.mensaje || 'Sin alertas'
                 };
             });
@@ -90,7 +90,7 @@ const Reports = () => {
         try {
             const response = await contenedoresService.getOne(idContenedor);
             setContenedorFilter(response.data);
-            console.log(response);
+            console.log(response.data);
         } catch (err) {
             console.error('Error cargando contenedores:', err);
         }
@@ -215,7 +215,6 @@ const Reports = () => {
                                 <th className={styles.th}>Nivel (%)</th>
                                 <th className={styles.th}>Estado</th>
                                 <th className={styles.th}>Detalles</th>
-                                <th className={styles.th}>Acciones</th>
                             </tr>
                         </thead>
                         <tbody className={styles.tbody}>
@@ -242,11 +241,6 @@ const Reports = () => {
                                             </span>
                                         </td>
                                         <td className={styles.td}>{registro.detalles}</td>
-                                        <td className={`${styles.td} ${styles.actionsCell}`}>
-                                            <button className={styles.reportViewButton} title="Ver detalles completos">
-                                                <FaEye />
-                                            </button>
-                                        </td>
                                     </tr>
                                 ))
                             ) : (
