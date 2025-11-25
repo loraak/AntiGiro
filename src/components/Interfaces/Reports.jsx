@@ -196,8 +196,9 @@ const Reports = () => {
             </div>
 
             <div className={styles.reportTableWrapper}>
-                {isLoadingAlerts ? (
+                {!isLoadingAlerts ? (
                     <div className={styles.loadingContainer}>
+                        <div className={styles.spinner}></div>
                         <p>Cargando alertas...</p>
                     </div>
                 ) : (

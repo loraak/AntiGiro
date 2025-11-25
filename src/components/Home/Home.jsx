@@ -59,7 +59,7 @@ const Home = () => {
                     )}
 
                     {/* Dispositivo - Solo Admin */}
-                    {isAdmin && (
+                    {(isAdmin || isTecnico) && (
                         <Link to="/configuration" className={styles.cardLink}>
                             <div className={styles.card}>
                                 <div className={styles.cardContent}>
