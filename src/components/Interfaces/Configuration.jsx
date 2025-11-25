@@ -3,7 +3,6 @@ import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Settings, Save
 import styles from "./Configuration.module.css";
 import { useLecturas } from '../../hooks/useLecturas';
 import { contenedoresService } from '../../services/contenedoresService';
-import { lecturasService } from '../../services/lecturasService';
 import AddContenedor from '../Interfaces/Admin/AddContenedor';
 import EditContenedor from '../Interfaces/Admin/EditContenedor';
 
@@ -15,11 +14,7 @@ const Configuration = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [loadingContenedores, setLoadingContenedores] = useState(true);
     
-    const [alerts, setAlerts] = useState([]);
-    const [loadingAlerts, setLoadingAlerts] = useState(false);
-    const [alertsError, setAlertsError] = useState(null);
-    
-    const { lectura, isLoading, error, lastUpdate, refetch } = useLecturas(selectedContenedorId, 5);
+    const { lectura, alertas, isLoading, error, lastUpdate, refetch } = useLecturas(selectedContenedorId, 5);
 
     const [config, setConfig] = useState({
         pesoMaximo: 5,
@@ -40,23 +35,6 @@ const Configuration = () => {
         }
     }, [contenedores, selectedContenedorId]);
 
-    useEffect(() => {
-        if (selectedContenedorId) {
-            loadAlertas();
-        }
-    }, [selectedContenedorId]);
-
-    // Recargar alertas cada 30 segundos
-    useEffect(() => {
-        if (selectedContenedorId) {
-            const interval = setInterval(() => {
-                loadAlertas();
-            }, 30000);
-
-            return () => clearInterval(interval);
-        }
-    }, [selectedContenedorId]);
-
     const loadContenedores = async () => {
         try {
             setLoadingContenedores(true);
@@ -70,45 +48,6 @@ const Configuration = () => {
             console.error('Error cargando contenedores:', err);
         } finally {
             setLoadingContenedores(false);
-        }
-    };
-
-    const loadAlertas = async () => {
-        try {
-            setLoadingAlerts(true);
-            setAlertsError(null);
-            
-            const response = await lecturasService.getAlertas(selectedContenedorId);
-            
-            const alertasFormateadas = [];
-            
-            if (response.data && Array.isArray(response.data)) {
-                response.data.forEach(lectura => {
-                    if (lectura.alerta && lectura.alerta.activo) {
-                        alertasFormateadas.push({
-                            id: `${lectura.id_contenedor}-${lectura.timestamp}-${lectura.alerta.tipo}`,
-                                level: lectura.alerta.tipo === 'sobrepeso' ? 'critical' : 
-                                    lectura.alerta.tipo === 'llenado' ? 'warning' : 
-                                    lectura.alerta.tipo === 'nivel_alto' ? 'warning' : 'warning',
-                            message: lectura.alerta.mensaje,
-                            time: new Date(lectura.timestamp).toLocaleTimeString('es-MX'),
-                            timestamp: lectura.timestamp,
-                            tipo: lectura.alerta.tipo,
-                        });
-                    }
-                });
-            }
-
-            alertasFormateadas.sort((a, b) => 
-                new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-            );
-            
-            setAlerts(alertasFormateadas);
-        } catch (err) {
-            console.error('Error cargando alertas:', err);
-            setAlertsError(err.message);
-        } finally {
-            setLoadingAlerts(false);
         }
     };
 
@@ -148,8 +87,7 @@ const Configuration = () => {
         weight: lectura.peso || 0,
         lastUpdate: new Date(lectura.timestamp).getTime(),
         nivel: lectura.nivel || 0,
-        doorOpen: !lectura.estado_electroiman,
-        alerta: lectura.alerta
+        doorOpen: !lectura.estado_electroiman
     } : null;
 
     const handleChange = (param, value) => {
@@ -173,12 +111,6 @@ const Configuration = () => {
                 id_usuario: selectedContenedor.id_usuario
             };
 
-            console.log('Guardando configuración:', updatedData);
-            
-            const response = await contenedoresService.update(selectedContenedorId, updatedData);
-            
-            console.log('Respuesta del servidor:', response);
-            
             setSelectedContenedor(prev => ({
                 ...prev,
                 peso_maximo: config.pesoMaximo,
@@ -186,9 +118,7 @@ const Configuration = () => {
             }));
             
             await loadContenedores();
-            
-            await loadAlertas();
-            
+                        
             setSaved(true);
             setTimeout(() => setSaved(false), 2000);
         } catch (err) {
@@ -233,7 +163,7 @@ const Configuration = () => {
     const getTipoAlertaText = (tipo) => {
         const tipoMap = {
             'sobrepeso': 'Sobrepeso',
-            'llenado': 'Nivel de llenado completado',
+            'llenado': 'Nivel de llenado alto',
             'sensor_error': 'Error en sensor',
             'mantenimiento': 'Sistema requiere mantenimiento',
             'bateria_baja': 'Batería baja',
@@ -241,19 +171,6 @@ const Configuration = () => {
         };
         return tipoMap[tipo] || tipo;
     };
-
-    if (isLoading && !lectura) {
-        return (
-            <div className={styles.container}>
-                <div className={styles.wrapper}>
-                    <div className={styles.loadingContainer}>
-                        <div className={styles.spinner}></div>
-                        <p>Cargando datos del sensor...</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
 
     const percentage = container?.nivel || 0;
     const status = getStatus(percentage);
@@ -263,6 +180,13 @@ const Configuration = () => {
             <div className={styles.wrapper}>
                 <div className={styles.headerSection}>
                     <h1 className={styles.title}>Monitoreo del Prototipo</h1>
+
+                    {isLoading && (
+                        <div className={styles.loadingContainer}>
+                            <div className={styles.spinner}></div>
+                            <p>Cargando datos...</p>
+                        </div>
+                    )}
                     
                     <div className={styles.selectorContainer}>
                         <label className={styles.selectorLabel}>Contenedor:</label>
@@ -322,36 +246,46 @@ const Configuration = () => {
 
                 {!error && container && (
                     <>
-                        {alerts.length > 0 && (
+                        {alertas && alertas.length > 0 && (
                             <div className={styles.alertsSection}>
                                 <div className={styles.alertsHeader}>
                                     <h2 className={styles.alertsTitle}>
-                                        Alertas del Sistema
+                                        Alertas del Sistema ({alertas.length})
                                     </h2>
                                 </div>
                                 
-                                {alertsError && (
-                                    <div className={styles.alertsError}>
-                                        Error cargando alertas: {alertsError}
-                                    </div>
-                                )}
-                                
                                 <div className={styles.alertsList}>
-                                    {alerts.map(alert => (
+                                    {alertas.map(alert => (
                                         <div
                                             key={alert.id}
                                             className={`${styles.alertItem} ${
-                                                alert.level === 'critical' ? styles.alertItemCritical : styles.alertItemWarning
+                                                alert.level === 'critical' 
+                                                    ? styles.alertItemCritical 
+                                                    : alert.level === 'warning'
+                                                    ? styles.alertItemWarning
+                                                    : styles.alertItemInfo
                                             }`}
                                         >
                                             <div className={styles.alertContent}>
-                                                <AlertCircle size={20} color={alert.level === 'critical' ? '#ef4444' : '#f59e0b'} />
+                                                <AlertCircle 
+                                                    size={20} 
+                                                    color={
+                                                        alert.level === 'critical' 
+                                                            ? '#ef4444' 
+                                                            : alert.level === 'warning' 
+                                                            ? '#f59e0b' 
+                                                            : '#3b82f6'
+                                                    } 
+                                                />
                                                 <div>
                                                     <div className={styles.alertMetadata}>
                                                         <span className={styles.alertType}>
                                                             {getTipoAlertaText(alert.tipo)}
                                                         </span>
                                                     </div>
+                                                    <p className={styles.alertMessage}>
+                                                        {alert.message}
+                                                    </p>
                                                 </div>
                                             </div>
                                             <span className={styles.alertTime}>{alert.time}</span>
@@ -438,7 +372,7 @@ const Configuration = () => {
                                                         ? styles.progressFillWarning
                                                         : styles.progressFillNormal
                                                 }`}
-                                                style={{ width: `${percentage}%` }}
+                                                style={{ width: `${Math.min(percentage, 100)}%` }}
                                             />
                                         </div>
                                     </div>
@@ -462,10 +396,6 @@ const Configuration = () => {
                                             <span className={styles.infoValue}>{container.location}</span>
                                         </div>
                                         <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>ID Dispositivo:</span>
-                                            <span className={styles.infoValue}>{container.id}</span>
-                                        </div>
-                                        <div className={styles.infoRow}>
                                             <span className={styles.infoLabel}>Capacidad Máxima:</span>
                                             <span className={styles.infoValue}>{container.capacity} kg</span>
                                         </div>
@@ -475,13 +405,13 @@ const Configuration = () => {
                                 <div className={styles.sensorsBox}>
                                     <h4 className={styles.sensorsTitle}>
                                         <Activity size={20} />
-                                        Estado de Sensores IoT
+                                        Estado de Sensores
                                     </h4>
                                     <div className={styles.sensorsDetailGrid}>
                                         <div className={styles.sensorDetailCard}>
                                             <div className={styles.sensorDetailHeader}>
                                                 <Activity size={18} color="#14447C" />
-                                                <span className={styles.sensorDetailName}>Sensor de Peso</span>
+                                                <span className={styles.sensorDetailName}>Peso</span>
                                             </div>
                                             <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValuePurple}`}>
                                                 {container.weight.toFixed(2)} kg
@@ -497,7 +427,7 @@ const Configuration = () => {
                                         <div className={styles.sensorDetailCard}>
                                             <div className={styles.sensorDetailHeader}>
                                                 <Droplets size={18} color="#D6D135" />
-                                                <span className={styles.sensorDetailName}>Sensor de Nivel</span>
+                                                <span className={styles.sensorDetailName}>Nivel</span>
                                             </div>
                                             <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValueViolet}`}>
                                                 {container.nivel.toFixed(1)}%
@@ -513,7 +443,7 @@ const Configuration = () => {
                                         <div className={styles.sensorDetailCard}>
                                             <div className={styles.sensorDetailHeader}>
                                                 <Magnet size={18} color={container.doorOpen ? '#ef4444' : '#00AD4B'} />
-                                                <span className={styles.sensorDetailName}>Sensor Magnético (Electroimán)</span>
+                                                <span className={styles.sensorDetailName}>Magnético (Electroimán)</span>
                                             </div>
                                             <p
                                                 className={`${styles.sensorDetailValue} ${
@@ -548,7 +478,7 @@ const Configuration = () => {
                             <div className={styles.header}>
                                 <h1 className={styles.title}>
                                     <Settings size={24} />
-                                    Configuración IoT
+                                    Configuración
                                 </h1>
                             </div>
 
@@ -561,14 +491,14 @@ const Configuration = () => {
                                     <input
                                         type="range"
                                         min="1"
-                                        max="20"
+                                        max="5"
                                         value={config.pesoMaximo}
                                         onChange={(e) => handleChange('pesoMaximo', Number(e.target.value))}
                                         className={styles.slider}
                                     />
                                     <div className={styles.range}>
                                         <span>1 kg</span>
-                                        <span>20 kg</span>
+                                        <span>5 kg</span>
                                     </div>
                                 </div>
 

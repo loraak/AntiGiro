@@ -43,7 +43,7 @@ const Register = () => {
                 <button onClick={() => setIsModalOpen(true)}className={styles.actionButton}>Nuevo Empleado</button>
             </div> 
 
-            {isLoading ? (
+            {!isLoading ? (
                 <div className={styles.loadingContainer}>
                     <div className={styles.spinner}></div>
                     <p>Cargando usuarios...</p>
