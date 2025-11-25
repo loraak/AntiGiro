@@ -1,25 +1,22 @@
-// src/components/Analysis.jsx
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from 'recharts';
+import {LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,} from 'recharts';
 import predictionService from '../../services/predictionService';
+import {contenedoresService} from '../../services/contenedoresService';
 import styles from './Analysis.module.css';
+import { analysisService } from '../../services/analysisService';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000/api';
+const THEME_COLORS = {
+  navy: '#14447C',
+  green: '#629460',
+  grid: '#e2e8f0',
+  text: '#64748b',
+  tooltipBg: '#ffffff',
+  tooltipShadow: '0 4px 12px rgba(0,0,0,0.1)'
+};
 
 const Analysis = () => {
   const [containerId, setContainerId] = useState(1);
+  const [contenedores, setContenedores] = useState([]);
   const [prediction, setPrediction] = useState(null);
   const [history, setHistory] = useState([]);
   const [historicalData, setHistoricalData] = useState([]);
@@ -28,12 +25,27 @@ const Analysis = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const loadContenedores = async () => {
+      try {
+        const response = await contenedoresService.getAll();
+        const listaContenedores = response.data || [];
+        setContenedores(listaContenedores);
+
+        if (listaContenedores.length > 0) {
+          setContainerId(listaContenedores[0].id_contenedor);
+        }
+      } catch (err) {
+        console.error('Error cargando lista de contenedores:', err);
+      }
+    };
+    loadContenedores();
+  }, []);
+
+  useEffect(() => {
     const initModel = async () => {
       try {
-        console.log('Iniciando carga del modelo...');
         await predictionService.initialize();
         setModelLoading(false);
-        console.log('Modelo LSTM cargado exitosamente');
       } catch (err) {
         console.error('Error al cargar modelo:', err);
         setError(`Error al cargar el modelo LSTM: ${err.message}`);
@@ -44,33 +56,78 @@ const Analysis = () => {
   }, []);
 
   useEffect(() => {
-    if (!modelLoading) {
+if (!modelLoading && containerId) {
+      setPrediction(null);
+      setHistory([]);
+      setHistoricalData([]);
+      setError(null);
+
       fetchHistory();
       fetchHistoricalData();
     }
   }, [containerId, modelLoading]);
 
   const fetchHistory = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/predictions/history/${containerId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.data.success) setHistory(response.data.data);
-    } catch (err) {
-      console.error('Error al obtener historial:', err);
-    }
+      try {
+        const response = await analysisService.getHistory(containerId);
+        
+        if (response.success) {
+          const historial = response.data || [];
+          setHistory(historial);
+
+          if (historial.length > 0) {
+            const ultimo = historial[0]; 
+
+            const prediccionRecuperada = {
+              peso_actual: Number(ultimo.peso_actual),
+              peso_predicho: Number(ultimo.prediccion_peso),
+              delta_peso: Number(ultimo.delta_peso),
+              confianza: Number(ultimo.confianza),
+              
+              nivel_actual: ultimo.nivel_actual || 0, 
+              fecha_prediccion: ultimo.fecha_prediccion || null,
+
+              interpretacion: {
+                decision: ultimo.decision_auditable,
+                estado: ultimo.estado,
+                prioridad: inferirPrioridad(ultimo.estado),
+                color: inferirColor(ultimo.estado)
+              },
+              
+              metadatos: {
+                calidad_datos: 'Registro Histórico',
+                metodo_usado: ultimo.modelo 
+              }
+            };
+
+            setPrediction(prediccionRecuperada);
+          }
+        }
+      } catch (err) {
+        console.error('Error al obtener historial:', err);
+      }
+    };
+
+  const inferirPrioridad = (estado) => {
+    if (!estado) return 'NORMAL';
+    if (estado.includes('LLENO')) return 'URGENTE';
+    if (estado.includes('CASI')) return 'ALTA';
+    if (estado.includes('Alto')) return 'MEDIA-ALTA';
+    return 'NORMAL';
+  };
+
+  const inferirColor = (estado) => {
+    if (!estado) return 'green';
+    if (estado.includes('LLENO') || estado.includes('Alto')) return 'red';
+    if (estado.includes('CASI') || estado.includes('Bajo')) return 'orange';
+    return 'green';
   };
 
   const fetchHistoricalData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/predictions/data/historical/${containerId}?limit=50`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (response.data.success) setHistoricalData(response.data.data);
-    } catch (err) {
+      const response = await analysisService.getHistoricalData(containerId); 
+      if (response.success) setHistoricalData(response.data); 
+    } catch (err) { 
       console.error('Error al obtener datos históricos:', err);
     }
   };
@@ -84,84 +141,59 @@ const Analysis = () => {
         throw new Error('El modelo aún no está cargado. Por favor espera unos segundos.');
       }
 
-      const token = localStorage.getItem('token');
-      const response = await axios.get(
-        `${API_URL}/predictions/data/historical/${containerId}?limit=20`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await analysisService.getHistoricalData(containerId, 20); 
+      const datosHistoricos = response.data; 
 
-      const datosHistoricos = response.data.data;
-      console.log('Datos históricos recibidos:', datosHistoricos);
-
-      if (!datosHistoricos || datosHistoricos.length < 12) {
-        throw new Error(
-          `Datos insuficientes. Se requieren al menos 12 lecturas. Recibidos: ${datosHistoricos?.length || 0}`
-        );
+      if (!datosHistoricos || datosHistoricos.length < 12) { 
+        throw new Error('No hay suficientes datos históricos para realizar una predicción.');
       }
 
-      const resultado = await predictionService.predict(datosHistoricos, containerId);
-      setPrediction(resultado);
+      const resultado = await predictionService.predict(datosHistoricos, containerId); 
+      setPrediction(resultado); 
 
-      await axios.post(
-        `${API_URL}/predictions/save`,
-        {
-          id_contenedor: containerId,
-          prediccion_peso: resultado.peso_predicho,
-          delta_peso: resultado.delta_peso,
-          peso_actual: resultado.peso_actual,
-          confianza: resultado.confianza,
-          modelo: `${resultado.metadatos.metodo_usado} (Híbrido)`,
-          estado: resultado.interpretacion.estado,
-          decision_auditable: resultado.interpretacion.decision,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      fetchHistory();
-    } catch (err) {
-      console.error('Error en predicción:', err);
-      setError(err.response?.data?.error || err.message || 'Error al realizar predicción');
-    } finally {
-      setLoading(false);
+      await analysisService.savePrediction({ 
+        id_contenedor: containerId,
+        prediccion_peso: resultado.peso_predicho, 
+        delta_peso: resultado.delta_peso, 
+        peso_actual: resultado.peso_actual, 
+        confianza: resultado.confianza,
+        estado: resultado.interpretacion.estado, 
+        decision_auditable: resultado.interpretacion.decision,
+      }); 
+      fetchHistory(); 
+    } catch (err) { 
+      console.error('Error al generar predicción:', err);
+      setError(`Error al generar predicción: ${err.message}`);
+    } finally { 
+      setLoading(false); 
     }
   };
 
-  const getColorClass = (color) => {
+  const getBorderColorClass = (color) => {
     const map = {
-      red: styles.predictionCardRed,
-      green: styles.predictionCardGreen,
-      orange: styles.predictionCardOrange,
+      red: styles.borderRed,
+      green: styles.borderGreen,
+      orange: styles.borderOrange,
     };
-    return map[color] || styles.predictionCardGreen;
+    return map[color] || styles.borderGreen;
   };
 
-  const getConfidenceColor = (confianza) => {
-    if (confianza >= 80) return 'text-green-600';
-    if (confianza >= 60) return 'text-yellow-600';
-    return 'text-red-600';
+  const getConfidenceTextColor = (confianza) => {
+    if (confianza >= 80) return styles.textSuccess;
+    if (confianza >= 60) return styles.textWarning;
+    return styles.textDanger;
   };
 
-  const getDeltaColor = (delta) => {
-    if (delta >= 0.2) return 'text-red-600';
-    if (delta >= 0.05) return 'text-green-600';
-    return 'text-orange-600';
+  const getDeltaTextColor = (delta) => {
+    if (delta >= 0.2) return styles.textDanger;
+    if (delta >= 0.05) return styles.textSuccess;
+    return styles.textWarning;
   };
 
   const getConfidenceBarClass = (confianza) => {
-    if (confianza >= 80) return styles.confidenceFillGreen;
-    if (confianza >= 60) return styles.confidenceFillYellow;
-    return styles.confidenceFillRed;
-  };
-
-  const getPrioridadBadgeClass = (prioridad) => {
-    const map = {
-      'URGENTE': 'bg-red-100 text-red-800 border-red-300',
-      'ALTA': 'bg-orange-100 text-orange-800 border-orange-300',
-      'MEDIA-ALTA': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      'NORMAL': 'bg-green-100 text-green-800 border-green-300',
-      'BAJA': 'bg-blue-100 text-blue-800 border-blue-300',
-    };
-    return map[prioridad] || 'bg-gray-100 text-gray-800 border-gray-300';
+    if (confianza >= 80) return styles.bgSuccess;
+    if (confianza >= 60) return styles.bgWarning;
+    return styles.bgDanger;
   };
 
   const chartData = historicalData.slice(-20).map((item, idx) => ({
@@ -174,51 +206,40 @@ const Analysis = () => {
     }),
   }));
 
-  const historyChartData = history.slice(-10).map((item, idx) => ({
-    index: idx + 1,
-    prediccion: item.prediccion_peso,
-    confianza: item.confianza || 0,
-    fecha: new Date(item.timestamp_registro).toLocaleDateString('es-MX', {
-      month: 'short',
-      day: 'numeric',
-    }),
-  }));
-
   if (modelLoading) {
     return (
       <div className={styles.loadingContainer}>
-        <div className="text-center">
-          <div className={styles.spinner}></div>
-          <p className="text-lg font-medium">Cargando modelo LSTM...</p>
-          <p className="text-sm text-gray-500 mt-2">Esto puede tardar unos segundos</p>
-        </div>
+        <div className={styles.spinner}></div>
+        <p className={styles.loadingText}>Inicializando Sistema</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.container}>
-      <div className="mb-8">
-        <h1 className={styles.title}>Predicciones - Sistema Híbrido</h1>
-        <p className="text-sm text-gray-600 mt-2">
-          🤖 Combina LSTM con reglas heurísticas para predicciones más confiables
-        </p>
-      </div>
+    <div className={styles.mainContainer}>
+      <div className={styles.headerSection}>
+        <h2 className={styles.title}>
+          Predicciones y Análisis 
+        </h2>
 
-      <div className={styles.card}>
-        <div className={styles.selectorContainer}>
-          <div>
-            <label className={styles.label}>Seleccionar Contenedor:</label>
+      <div className={styles.selectorContainer}>
+        <div className={styles.inputWrapper}>
+            <label className={styles.selectorLabel}>Contenedor:</label>
             <select
-              value={containerId}
-              onChange={(e) => setContainerId(parseInt(e.target.value))}
+              value={containerId || ''}
+              onChange={(e) => setContainerId(Number(e.target.value))}
               className={styles.select}
+              disabled={contenedores.length === 0}
             >
-              <option value={1}>Contenedor 1</option>
-              <option value={2}>Contenedor 2</option>
-              <option value={3}>Contenedor 3</option>
+              {contenedores.length === 0 && <option>Cargando...</option>}
+
+              {contenedores.map((cont) => (
+                <option key={cont.id_contenedor} value={cont.id_contenedor}>
+                  {cont.nombre} {cont.ubicacion ? `- ${cont.ubicacion}` : ''}
+                </option>
+              ))}
             </select>
-          </div>
+      </div>
 
           <button
             onClick={handlePredict}
@@ -226,199 +247,161 @@ const Analysis = () => {
             className={styles.predictButton}
           >
             {loading ? (
-              <span className="flex items-center gap-2">
-                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Prediciendo...
-              </span>
+              <>Calculando...</>
             ) : (
-              'Generar Predicción'
+              <>
+                Generar Predicción
+              </>
             )}
           </button>
-
-          <div className="w-full mt-4">
-            {predictionService.isReady ? (
-              <div className={styles.modelStatusReady}>✅ Sistema híbrido listo</div>
-            ) : (
-              <div className={styles.modelStatusLoading}>⏳ Inicializando...</div>
-            )}
-          </div>
-        </div>
+      </div>
       </div>
 
       {error && (
         <div className={styles.errorAlert}>
-          <p className="font-medium">⚠️ Error</p>
-          <p className="text-sm">{error}</p>
+          <p className={styles.errorTitle}>Error del Sistema</p>
+          <p className={styles.errorMessage}>{error}</p>
         </div>
       )}
 
       {prediction && (
-        <div className={`${styles.predictionSection} ${getColorClass(prediction.interpretacion?.color)}`}>
-          <div className="flex justify-between items-start mb-4">
-            <h2 className="text-2xl font-bold">🔮 Última Predicción</h2>
-            <span className={`px-3 py-1 rounded-full text-sm font-semibold border-2 ${getPrioridadBadgeClass(prediction.interpretacion?.prioridad)}`}>
-              {prediction.interpretacion?.prioridad}
-            </span>
+        <div className={`${styles.predictionSection} ${getBorderColorClass(prediction.interpretacion?.color)}`}>
+          <div className={styles.predictionHeader}>
+            <h2 className={styles.predictionTitle}>Resultado del Análisis</h2>
           </div>
 
-          {/* Método usado */}
-          <div className="mb-6 p-4 bg-white bg-opacity-50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium opacity-75">Método:</span>
-              <span className="text-lg font-bold">
-                {prediction.metadatos?.metodo_usado === 'LSTM' ? '🤖 LSTM' : '📊 Heurística (Regresión Lineal)'}
-              </span>
-            </div>
-            {prediction.metadatos?.detalle_modelo?.razon_heuristica && (
-              <p className="text-xs mt-1 opacity-75">
-                Razón: {prediction.metadatos.detalle_modelo.razon_heuristica}
+          <div className={styles.infoGrid}>
+            <div className={styles.infoCard}>
+              <p className={styles.infoLabel}>Peso Actual</p>
+              <p className={styles.infoValueBig}>
+                {prediction.peso_actual?.toFixed(4)} <span className={styles.unitText}>kg</span>
               </p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div className={styles.infoCard}>
-              <p className="text-sm font-medium opacity-75 mb-1">Peso Actual</p>
-              <p className="text-2xl font-bold text-gray-700">{prediction.peso_actual?.toFixed(4)} kg</p>
-              <p className="text-xs opacity-75 mt-1">Nivel: {prediction.nivel_actual?.toFixed(1)}%</p>
+              <p className={styles.subValueText}>Nivel: {prediction.nivel_actual?.toFixed(1)}%</p>
             </div>
 
             <div className={styles.infoCard}>
-              <p className="text-sm font-medium opacity-75 mb-1">Incremento Predicho</p>
-              <p className={`text-4xl font-bold ${getDeltaColor(prediction.delta_peso)}`}>
-                +{prediction.delta_peso?.toFixed(4)} kg
+              <p className={styles.infoLabel}>Incremento Estimado</p>
+              <p className={`${styles.infoValueBig} ${getDeltaTextColor(prediction.delta_peso)}`}>
+                +{prediction.delta_peso?.toFixed(4)} <span className={styles.unitText}>kg</span>
               </p>
               {prediction.metadatos?.detalle_modelo?.tasa_crecimiento && (
-                <p className="text-xs opacity-75 mt-1">
+                <p className={styles.subValueText}>
                   Tasa: {prediction.metadatos.detalle_modelo.tasa_crecimiento.toFixed(4)} kg/h
                 </p>
               )}
             </div>
 
             <div className={styles.infoCard}>
-              <p className="text-sm font-medium opacity-75 mb-1">Peso Futuro Estimado</p>
-              <p className="text-3xl font-bold">{prediction.peso_predicho?.toFixed(4)} kg</p>
+              <p className={styles.infoLabel}>Peso Futuro (Predicho)</p>
+              <p className={`${styles.infoValueBig} ${styles.textNavy}`}>
+                {prediction.peso_predicho?.toFixed(4)} <span className={styles.unitText}>kg</span>
+              </p>
+              <p className={styles.subValueText}>
+                Estimado para:
+              </p>
+              <p className={styles.dateText}>
+                {new Date(prediction.fecha_prediccion).toLocaleString('es-MX', {
+                  month: 'short', 
+                  day: 'numeric', 
+                  hour: '2-digit', 
+                  minute: '2-digit'
+                })}
+              </p>
             </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            
             <div className={styles.infoCard}>
-              <p className="text-sm font-medium opacity-75 mb-1">Confianza del Sistema</p>
-              <div className="flex items-baseline gap-2">
-                <p className={`text-4xl font-bold ${getConfidenceColor(prediction.confianza)}`}>
+              <p className={styles.infoLabel}>Confianza del Modelo</p>
+              <div className={styles.confidenceWrapper}>
+                <p className={`${styles.infoValueBig} ${getConfidenceTextColor(prediction.confianza)}`}>
                   {prediction.confianza?.toFixed(1)}%
                 </p>
-                <span className="text-sm opacity-75">({prediction.metadatos?.calidad_datos})</span>
+                <span className={styles.subValueText}>({prediction.metadatos?.calidad_datos})</span>
               </div>
-              <div className={styles.confidenceBar}>
+              <div className={styles.confidenceBarBg}>
                 <div
-                  className={getConfidenceBarClass(prediction.confianza)}
+                  className={`${styles.confidenceFill} ${getConfidenceBarClass(prediction.confianza)}`}
                   style={{ width: `${prediction.confianza}%` }}
                 />
               </div>
             </div>
-
-            <div className={styles.infoCard}>
-              <p className="text-sm font-medium opacity-75 mb-1">Timestamp</p>
-              <p className="text-lg">{new Date(prediction.timestamp).toLocaleString('es-MX')}</p>
-              <p className="text-xs opacity-75 mt-1">{prediction.metadatos?.muestras_usadas} muestras</p>
-            </div>
           </div>
 
-          <div className={`${styles.infoCard} mb-4`}>
-            <p className="text-sm font-medium opacity-75 mb-1">Estado</p>
-            <p className="text-xl font-semibold">{prediction.interpretacion?.estado}</p>
+          <div className={styles.decisionBox}>
+              <p className={styles.decisionLabel}>Decisión Recomendada</p>
+              <p className={styles.decisionValue}>{prediction.interpretacion?.decision}</p>
           </div>
-
-          <div className={styles.infoCard}>
-            <p className="text-sm font-medium opacity-75 mb-1">Decisión Recomendada</p>
-            <p className="text-lg">{prediction.interpretacion?.decision}</p>
-          </div>
-
-          {/* Detalles técnicos (colapsable) */}
-          {prediction.metadatos?.detalle_modelo && (
-            <details className="mt-4 p-4 bg-white bg-opacity-30 rounded-lg">
-              <summary className="cursor-pointer font-medium text-sm opacity-75">
-                🔧 Detalles Técnicos
-              </summary>
-              <div className="mt-3 text-xs font-mono space-y-1 opacity-75">
-                {prediction.metadatos.detalle_modelo.output_raw !== undefined && (
-                  <p>LSTM Output (normalizado): {prediction.metadatos.detalle_modelo.output_raw.toFixed(4)}</p>
-                )}
-                {prediction.metadatos.detalle_modelo.output_denorm !== undefined && (
-                  <p>LSTM Output (denormalizado): {prediction.metadatos.detalle_modelo.output_denorm.toFixed(4)} kg</p>
-                )}
-                {prediction.metadatos.detalle_modelo.delta_calculado !== undefined && (
-                  <p>Delta calculado por LSTM: {prediction.metadatos.detalle_modelo.delta_calculado.toFixed(4)} kg</p>
-                )}
-                {prediction.metadatos.detalle_modelo.delta_ajustado && (
-                  <p className="text-orange-600">⚠️ Delta ajustado por contenedor lleno</p>
-                )}
-              </div>
-            </details>
-          )}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className={styles.chartsGrid}>
         <div className={styles.card}>
-          <h3 className={styles.chartTitle}>📈 Datos Históricos</h3>
+          <h3 className={styles.chartTitle}>Tendencia de Datos</h3>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="timestamp" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke={THEME_COLORS.grid} />
+                <XAxis 
+                  dataKey="timestamp" 
+                  stroke={THEME_COLORS.text} 
+                  fontSize={12} 
+                  tickLine={false} 
+                />
+                <YAxis 
+                  stroke={THEME_COLORS.text} 
+                  fontSize={12} 
+                  tickLine={false} 
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    borderRadius: '8px', 
+                    border: 'none', 
+                    boxShadow: THEME_COLORS.tooltipShadow 
+                  }} 
+                />
                 <Legend />
-                <Line type="monotone" dataKey="peso" stroke="#3b82f6" name="Peso (kg)" strokeWidth={2} />
-                <Line type="monotone" dataKey="nivel" stroke="#10b981" name="Nivel (%)" strokeWidth={2} />
+                <Line 
+                  type="monotone" 
+                  dataKey="peso" 
+                  stroke={THEME_COLORS.navy} 
+                  name="Peso (kg)" 
+                  strokeWidth={3} 
+                  dot={{ r: 2 }} 
+                  activeDot={{ r: 6 }} 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="nivel" 
+                  stroke={THEME_COLORS.green} 
+                  name="Nivel (%)" 
+                  strokeWidth={2} 
+                  dot={false} 
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className={styles.emptyState}>No hay datos</p>
-          )}
-        </div>
-
-        <div className={styles.card}>
-          <h3 className={styles.chartTitle}>🎯 Historial Predicciones</h3>
-          {historyChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={historyChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="fecha" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="prediccion" fill="#8b5cf6" name="Predicción (kg)" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className={styles.emptyState}>No hay predicciones</p>
+            <p className={styles.emptyChart}>No hay datos suficientes para graficar</p>
           )}
         </div>
       </div>
 
       <div className={styles.card}>
-        <h2 className="text-xl font-bold mb-4">📜 Historial Detallado</h2>
+        <h2 className={styles.sectionTitle}>
+          Registro
+        </h2>
         {history.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p>No hay predicciones para este contenedor</p>
+          <div className={styles.emptyChart}>
+            <p>No hay registros disponibles para este contenedor</p>
           </div>
         ) : (
           <div className={styles.tableContainer}>
             <table className={styles.table}>
-              <thead className={styles.tableHead}>
+              <thead>
                 <tr>
                   <th className={styles.tableHeader}>Fecha</th>
                   <th className={styles.tableHeader}>Peso (kg)</th>
                   <th className={styles.tableHeader}>Confianza</th>
                   <th className={styles.tableHeader}>Estado</th>
                   <th className={styles.tableHeader}>Decisión</th>
-                  <th className={styles.tableHeader}>Método</th>
                 </tr>
               </thead>
               <tbody>
@@ -427,21 +410,20 @@ const Analysis = () => {
                     <td className={styles.tableCell}>
                       {new Date(item.timestamp_registro).toLocaleString('es-MX')}
                     </td>
-                    <td className={`${styles.tableCell} font-mono font-medium`}>
+                    <td className={`${styles.tableCell} ${styles.cellMono}`}>
                       {item.prediccion_peso?.toFixed(4)}
                     </td>
                     <td className={styles.tableCell}>
-                      <span className={`font-semibold ${getConfidenceColor(item.confianza || 0)}`}>
+                      <span className={`${styles.cellBold} ${item.confianza >= 80 ? styles.textSuccess : styles.textWarning}`}>
                         {item.confianza ? `${item.confianza.toFixed(1)}%` : 'N/A'}
                       </span>
                     </td>
                     <td className={styles.tableCell}>
-                      <span className={styles.statusBadge}>{item.estado}</span>
+                      <span className={`${styles.badge} ${styles.badgeNeutral}`}>
+                        {item.estado}
+                      </span>
                     </td>
                     <td className={styles.tableCell}>{item.decision_auditable}</td>
-                    <td className={styles.tableCell}>
-                      <span className="text-xs opacity-75">{item.modelo}</span>
-                    </td>
                   </tr>
                 ))}
               </tbody>

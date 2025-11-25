@@ -39,14 +39,6 @@ function AppContent() {
             </ProtectedRoute>
           } 
         />
-        <Route 
-          path="/configuration" 
-          element={
-            <ProtectedRoute allowedRoles={['admin']}>
-              <Configuration />
-            </ProtectedRoute>
-          } 
-        />
 
         {/* Rutas para ADMIN y TECNICO */}
         <Route 
@@ -62,6 +54,15 @@ function AppContent() {
           element={
             <ProtectedRoute allowedRoles={['admin', 'tecnico']}>
               <Reports />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/configuration" 
+          element={
+            <ProtectedRoute allowedRoles={['admin', 'tecnico']}>
+              <Configuration />
             </ProtectedRoute>
           } 
         />

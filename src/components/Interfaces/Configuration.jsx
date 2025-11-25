@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Settings, Save, RotateCcw, Plus, Edit } from 'lucide-react';
+import { Package, AlertCircle, Clock, Droplets, Activity, Magnet, Save, RotateCcw, Plus, Edit } from 'lucide-react';
 import styles from "./Configuration.module.css";
 import { useLecturas } from '../../hooks/useLecturas';
 import { contenedoresService } from '../../services/contenedoresService';
+import { authService } from '../../services/authService'; 
 import AddContenedor from '../Interfaces/Admin/AddContenedor';
 import EditContenedor from '../Interfaces/Admin/EditContenedor';
 
@@ -24,6 +25,9 @@ const Configuration = () => {
     });
 
     const [saved, setSaved] = useState(false);
+
+    const userRole = authService.getUserRole();
+    const isTecnico = userRole === 'tecnico'; 
 
     useEffect(() => {
         loadContenedores();
@@ -95,32 +99,32 @@ const Configuration = () => {
         setSaved(false);
     };
 
-const handleSave = async () => {
-    try {
-        if (!selectedContenedorId || !selectedContenedor) {
-            alert('No hay contenedor seleccionado');
-            return;
+    const handleSave = async () => {
+        try {
+            if (!selectedContenedorId || !selectedContenedor) {
+                alert('No hay contenedor seleccionado');
+                return;
+            }
+
+            const updatedData = {
+                ...selectedContenedor,
+                peso_maximo: config.pesoMaximo,
+                nivel_alerta: config.nivelLlenado
+            };
+
+            await contenedoresService.update(selectedContenedorId, updatedData);
+
+            setSelectedContenedor(updatedData);
+            
+            await loadContenedores();
+                        
+            setSaved(true);
+            setTimeout(() => setSaved(false), 2000);
+        } catch (err) {
+            console.error('Error guardando configuración:', err);
+            alert(`Error al guardar la configuración: ${err.message || 'Error desconocido'}`);
         }
-
-        const updatedData = {
-            ...selectedContenedor,
-            peso_maximo: config.pesoMaximo,
-            nivel_alerta: config.nivelLlenado
-        };
-
-        await contenedoresService.update(selectedContenedorId, updatedData);
-
-        setSelectedContenedor(updatedData);
-        
-        await loadContenedores();
-                    
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
-    } catch (err) {
-        console.error('Error guardando configuración:', err);
-        alert(`Error al guardar la configuración: ${err.message || 'Error desconocido'}`);
-    }
-};
+    };
 
     const handleReset = () => {
         if (selectedContenedor) {
@@ -171,387 +175,368 @@ const handleSave = async () => {
     const status = getStatus(percentage);
 
     return (
-        <div className={styles.container}>
-            <div className={styles.wrapper}>
-                <div className={styles.headerSection}>
-                    <h1 className={styles.title}>Monitoreo del Prototipo</h1>
+            <div className={styles.container}>
+                <div className={styles.wrapper}>
+                    <div className={styles.headerSection}>
+                        <h1 className={styles.title}>Monitoreo del Prototipo</h1>
+                        
+                        <div className={styles.selectorContainer}>
+                            <label className={styles.selectorLabel}>Contenedor:</label>
+                            <select
+                                value={selectedContenedorId}
+                                onChange={(e) => setSelectedContenedorId(Number(e.target.value))}
+                                className={styles.selectorDropdown}
+                                disabled={loadingContenedores}
+                            >
+                                {contenedores.map((cont) => (
+                                    <option key={cont.id_contenedor} value={cont.id_contenedor}>
+                                        {cont.nombre} - {cont.ubicacion}
+                                    </option>
+                                ))}
+                            </select>
 
-                    {isLoading && (
+                            {!isTecnico && (
+                                <>
+                                    <button
+                                        onClick={() => setIsEditModalOpen(true)}
+                                        className={styles.addButton}
+                                        title="Editar contenedor actual"
+                                        disabled={!selectedContenedor}
+                                    >
+                                        <Edit size={18} />
+                                        Editar
+                                    </button>
+                                    <button
+                                        onClick={() => setIsAddModalOpen(true)}
+                                        className={styles.addButton}
+                                        title="Agregar nuevo contenedor"
+                                    >
+                                        <Plus size={18} />
+                                        Nuevo
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
+                        {lastUpdate && !isLoading && (
+                            <p className={styles.lastUpdateText}>
+                                Última actualización: {lastUpdate.toLocaleTimeString('es-MX')}
+                            </p>
+                        )}
+                    </div>
+
+                    {isLoading ? (
                         <div className={styles.loadingContainer}>
                             <div className={styles.spinner}></div>
                             <p>Cargando datos...</p>
                         </div>
-                    )}
-                    
-                    <div className={styles.selectorContainer}>
-                        <label className={styles.selectorLabel}>Contenedor:</label>
-                        <select
-                            value={selectedContenedorId}
-                            onChange={(e) => setSelectedContenedorId(Number(e.target.value))}
-                            className={styles.selectorDropdown}
-                            disabled={loadingContenedores}
-                        >
-                            {contenedores.map((cont) => (
-                                <option key={cont.id_contenedor} value={cont.id_contenedor}>
-                                    {cont.nombre} - {cont.ubicacion}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            onClick={() => setIsEditModalOpen(true)}
-                            className={styles.addButton}
-                            title="Editar contenedor actual"
-                            disabled={!selectedContenedor}
-                        >
-                            <Edit size={18} />
-                            Editar
-                        </button>
-                        <button
-                            onClick={() => setIsAddModalOpen(true)}
-                            className={styles.addButton}
-                            title="Agregar nuevo contenedor"
-                        >
-                            <Plus size={18} />
-                            Nuevo
-                        </button>
-                    </div>
+                    ) : error ? (
+                        <div className={styles.errorContainer}>
+                            <AlertCircle size={48} color="#ef4444" />
+                            <p>Error: {error}</p>
+                            <button onClick={refetch} className={styles.retryButton}>
+                                Reintentar
+                            </button>
+                        </div>
+                    ) : !container ? (
+                        <div className={styles.errorContainer}>
+                            <p>No hay datos disponibles del contenedor</p>
+                        </div>
+                    ) : (
+                        <>
+                            {alertas && alertas.length > 0 && (
+                                <div className={styles.alertsSection}>
+                                    <div className={styles.alertsHeader}>
+                                        <h2 className={styles.alertsTitle}>
+                                            Alertas del Sistema ({alertas.length})
+                                        </h2>
+                                    </div>
+                                    <div className={styles.alertsList}>
+                                        {alertas.map(alert => (
+                                            <div
+                                                key={alert.id}
+                                                className={`${styles.alertItem} ${
+                                                    alert.level === 'critical' 
+                                                        ? styles.alertItemCritical 
+                                                        : alert.level === 'warning'
+                                                        ? styles.alertItemWarning
+                                                        : styles.alertItemInfo
+                                                }`}
+                                            >
+                                                <div className={styles.alertContent}>
+                                                    <AlertCircle 
+                                                        size={20} 
+                                                        color={
+                                                            alert.level === 'critical' ? '#ef4444' : 
+                                                            alert.level === 'warning' ? '#f59e0b' : '#3b82f6'
+                                                        } 
+                                                    />
+                                                    <div>
+                                                        <div className={styles.alertMetadata}>
+                                                            <span className={styles.alertType}>
+                                                                {getTipoAlertaText(alert.tipo)}
+                                                            </span>
+                                                        </div>
+                                                        <p className={styles.alertMessage}>
+                                                            {alert.message}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span className={styles.alertTime}>{alert.time}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
-                    {lastUpdate && (
-                        <p className={styles.lastUpdateText}>
-                            Última actualización: {lastUpdate.toLocaleTimeString('es-MX')}
-                        </p>
+                            <div className={styles.containersGrid}>
+                                <div className={styles.containerCard}>
+                                    <div className={styles.containerHeader}>
+                                        <div>
+                                            <h3 className={styles.containerName}>{container.name}</h3>
+                                            <p className={styles.containerId}>{container.id}</p>
+                                        </div>
+                                        <span className={`${styles.statusBadge} ${
+                                            status === 'critical' ? styles.statusCritical : 
+                                            status === 'warning' ? styles.statusWarning : styles.statusNormal
+                                        }`}>
+                                            {getStatusText(status)}
+                                        </span>
+                                    </div>
+
+                                    <div className={styles.containerContent}>
+                                        <div className={styles.sensorsGrid}>
+                                            <div className={`${styles.sensorCard} ${styles.sensorCardBlue}`}>
+                                                <div className={styles.sensorHeader}>
+                                                    <Package size={24} />
+                                                    <p className={styles.sensorLabel}>Peso Total</p>
+                                                </div>
+                                                <p className={styles.sensorValue}>{container.weight.toFixed(2)} kg</p>
+                                                <p className={styles.sensorSubtext}>de {container.capacity} kg máx.</p>
+                                            </div>
+
+                                            <div className={`${styles.sensorCard} ${styles.sensorCardYellow}`}>
+                                                <div className={styles.sensorHeader}>
+                                                    <Droplets size={24} />
+                                                    <p className={styles.sensorLabel}>Capacidad</p>
+                                                </div>
+                                                <p className={styles.sensorValue}>{percentage.toFixed(1)}%</p>
+                                                <p className={styles.sensorSubtext}>Nivel de llenado</p>
+                                            </div>
+
+                                            <div className={`${styles.sensorCard} ${styles.sensorCardRed}`}>
+                                                <div className={styles.sensorHeader}>
+                                                    <Clock size={24} />
+                                                    <p className={styles.sensorLabel}>Última Act.</p>
+                                                </div>
+                                                <p className={styles.sensorValue}>
+                                                    {Math.floor((Date.now() - container.lastUpdate) / 60000)}m
+                                                </p>
+                                                <p className={styles.sensorSubtext}>hace minutos</p>
+                                            </div>
+
+                                            <div className={`${styles.sensorCard} ${styles.sensorCardGreen}`}>
+                                                <div className={styles.sensorHeader}>
+                                                    <Magnet size={24} />
+                                                    <p className={styles.sensorLabel}>Electroimán</p>
+                                                </div>
+                                                <p className={styles.sensorValue}>
+                                                    {container.doorOpen ? 'ABIERTO' : 'CERRADO'}
+                                                </p>
+                                                <p className={styles.sensorSubtext}>Estado actual</p>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.progressSection}>
+                                            <div className={styles.progressHeader}>
+                                                <span className={styles.progressLabel}>Llenado</span>
+                                                <span className={styles.progressValue}>{percentage.toFixed(1)}%</span>
+                                            </div>
+                                            <div className={styles.progressBar}>
+                                                <div
+                                                    className={`${styles.progressFill} ${
+                                                        status === 'critical' ? styles.progressFillCritical : 
+                                                        status === 'warning' ? styles.progressFillWarning : styles.progressFillNormal
+                                                    }`}
+                                                    style={{ width: `${Math.min(percentage, 100)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className={styles.detailPanel}>
+                                <h2 className={styles.detailTitle}>Detalles: {container.name}</h2>
+
+                                <div className={styles.detailGrid}>
+                                    <div className={styles.infoBox}>
+                                        <h4 className={styles.infoTitle}>Información del Residuo</h4>
+                                        <div className={styles.infoList}>
+                                            <div className={styles.infoRow}>
+                                                <span className={styles.infoLabel}>Tipo:</span>
+                                                <span className={styles.infoValue}>{container.type}</span>
+                                            </div>
+                                            <div className={styles.infoRow}>
+                                                <span className={styles.infoLabel}>Ubicación:</span>
+                                                <span className={styles.infoValue}>{container.location}</span>
+                                            </div>
+                                            <div className={styles.infoRow}>
+                                                <span className={styles.infoLabel}>Capacidad Máxima:</span>
+                                                <span className={styles.infoValue}>{container.capacity} kg</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.sensorsBox}>
+                                        <h4 className={styles.sensorsTitle}>
+                                            Estado de Sensores
+                                        </h4>
+                                        <div className={styles.sensorsDetailGrid}>
+                                            <div className={styles.sensorDetailCard}>
+                                                <div className={styles.sensorDetailHeader}>
+                                                    <Activity size={18} color="#14447C" />
+                                                    <span className={styles.sensorDetailName}>Peso</span>
+                                                </div>
+                                                <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValuePurple}`}>
+                                                    {container.weight.toFixed(2)} kg
+                                                </p>
+                                                <p className={styles.sensorDetailInfo}>
+                                                    Celda de carga • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
+                                                </p>
+                                                <div className={`${styles.sensorDetailStatus} ${styles.sensorStatusActive}`}>
+                                                    <span className={styles.sensorStatusActiveText}>● ACTIVO</span>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.sensorDetailCard}>
+                                                <div className={styles.sensorDetailHeader}>
+                                                    <Droplets size={18} color="#D6D135" />
+                                                    <span className={styles.sensorDetailName}>Nivel</span>
+                                                </div>
+                                                <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValueViolet}`}>
+                                                    {container.nivel.toFixed(1)}%
+                                                </p>
+                                                <p className={styles.sensorDetailInfo}>
+                                                    Capacidad • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
+                                                </p>
+                                                <div className={`${styles.sensorDetailStatus} ${styles.sensorStatusPurple}`}>
+                                                    <span className={styles.sensorStatusPurpleText}>● ACTIVO</span>
+                                                </div>
+                                            </div>
+
+                                            <div className={styles.sensorDetailCard}>
+                                                <div className={styles.sensorDetailHeader}>
+                                                    <Magnet size={18} color={container.doorOpen ? '#ef4444' : '#00AD4B'} />
+                                                    <span className={styles.sensorDetailName}>Magnético (Electroimán)</span>
+                                                </div>
+                                                <p className={`${styles.sensorDetailValue} ${
+                                                    container.doorOpen ? styles.sensorDetailValueRed : styles.sensorDetailValueGreen
+                                                }`}>
+                                                    {container.doorOpen ? 'ABIERTO' : 'CERRADO'}
+                                                </p>
+                                                <p className={styles.sensorDetailInfo}>
+                                                    Estado de electroimán • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
+                                                </p>
+                                                <div className={`${styles.sensorDetailStatus} ${
+                                                    container.doorOpen ? styles.sensorStatusAlert : styles.sensorStatusNormal
+                                                }`}>
+                                                    <span className={
+                                                        container.doorOpen ? styles.sensorStatusAlertText : styles.sensorStatusNormalText
+                                                    }>
+                                                        ● {container.doorOpen ? 'ALERTA' : 'NORMAL'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {!isTecnico && (
+                                <div className={styles.card}>
+                                    <div className={styles.header}>
+                                        <h1 className={styles.title}>
+                                            Configuración
+                                        </h1>
+                                    </div>
+
+                                    <div className={styles.controls}>
+                                        <div className={styles.controlGroup}>
+                                            <label className={styles.label}>
+                                                <span>Peso Máximo</span>
+                                                <span className={styles.value}>{config.pesoMaximo} kg</span>
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="1"
+                                                max="5"
+                                                value={config.pesoMaximo}
+                                                onChange={(e) => handleChange('pesoMaximo', Number(e.target.value))}
+                                                className={styles.slider}
+                                            />
+                                            <div className={styles.range}>
+                                                <span>1 kg</span>
+                                                <span>5 kg</span>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.controlGroup}>
+                                            <label className={styles.label}>
+                                                <span>Alerta de Llenado</span>
+                                                <span className={styles.value}>{config.nivelLlenado}%</span>
+                                            </label>
+                                            <input
+                                                type="range"
+                                                min="0"
+                                                max="100"
+                                                value={config.nivelLlenado}
+                                                onChange={(e) => handleChange('nivelLlenado', Number(e.target.value))}
+                                                className={styles.slider}
+                                            />
+                                            <div className={styles.range}>
+                                                <span>0%</span>
+                                                <span>100%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.buttons}>
+                                        <button onClick={handleSave} className={styles.saveButton}>
+                                            <Save className={styles.buttonIcon} />
+                                            Guardar
+                                        </button>
+                                        <button onClick={handleReset} className={styles.resetButton}>
+                                            <RotateCcw className={styles.buttonIcon} />
+                                            Restablecer
+                                        </button>
+                                    </div>
+
+                                    {saved && (
+                                        <div className={styles.successMessage}>
+                                            Configuración guardada correctamente
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
 
-                {error && (
-                    <div className={styles.errorContainer}>
-                        <AlertCircle size={48} color="#ef4444" />
-                        <p>Error: {error}</p>
-                        <button onClick={refetch} className={styles.retryButton}>
-                            Reintentar
-                        </button>
-                    </div>
-                )}
+                <AddContenedor
+                    isOpen={isAddModalOpen}
+                    onClose={() => setIsAddModalOpen(false)}
+                    onContenedorAdded={handleContenedorAdded}
+                />
 
-                {!error && !container && (
-                    <div className={styles.errorContainer}>
-                        <p>No hay datos disponibles del contenedor</p>
-                    </div>
-                )}
-
-                {!error && container && (
-                    <>
-                        {alertas && alertas.length > 0 && (
-                            <div className={styles.alertsSection}>
-                                <div className={styles.alertsHeader}>
-                                    <h2 className={styles.alertsTitle}>
-                                        Alertas del Sistema ({alertas.length})
-                                    </h2>
-                                </div>
-                                
-                                <div className={styles.alertsList}>
-                                    {alertas.map(alert => (
-                                        <div
-                                            key={alert.id}
-                                            className={`${styles.alertItem} ${
-                                                alert.level === 'critical' 
-                                                    ? styles.alertItemCritical 
-                                                    : alert.level === 'warning'
-                                                    ? styles.alertItemWarning
-                                                    : styles.alertItemInfo
-                                            }`}
-                                        >
-                                            <div className={styles.alertContent}>
-                                                <AlertCircle 
-                                                    size={20} 
-                                                    color={
-                                                        alert.level === 'critical' 
-                                                            ? '#ef4444' 
-                                                            : alert.level === 'warning' 
-                                                            ? '#f59e0b' 
-                                                            : '#3b82f6'
-                                                    } 
-                                                />
-                                                <div>
-                                                    <div className={styles.alertMetadata}>
-                                                        <span className={styles.alertType}>
-                                                            {getTipoAlertaText(alert.tipo)}
-                                                        </span>
-                                                    </div>
-                                                    <p className={styles.alertMessage}>
-                                                        {alert.message}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <span className={styles.alertTime}>{alert.time}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className={styles.containersGrid}>
-                            <div className={styles.containerCard}>
-                                <div className={styles.containerHeader}>
-                                    <div>
-                                        <h3 className={styles.containerName}>{container.name}</h3>
-                                        <p className={styles.containerId}>{container.id}</p>
-                                    </div>
-                                    <span
-                                        className={`${styles.statusBadge} ${
-                                            status === 'critical'
-                                                ? styles.statusCritical
-                                                : status === 'warning'
-                                                ? styles.statusWarning
-                                                : styles.statusNormal
-                                        }`}
-                                    >
-                                        {getStatusText(status)}
-                                    </span>
-                                </div>
-
-                                <div className={styles.containerContent}>
-                                    <div className={styles.sensorsGrid}>
-                                        <div className={`${styles.sensorCard} ${styles.sensorCardBlue}`}>
-                                            <div className={styles.sensorHeader}>
-                                                <Package size={24} />
-                                                <p className={styles.sensorLabel}>Peso Total</p>
-                                            </div>
-                                            <p className={styles.sensorValue}>{container.weight.toFixed(2)} kg</p>
-                                            <p className={styles.sensorSubtext}>de {container.capacity} kg máx.</p>
-                                        </div>
-
-                                        <div className={`${styles.sensorCard} ${styles.sensorCardYellow}`}>
-                                            <div className={styles.sensorHeader}>
-                                                <Droplets size={24} />
-                                                <p className={styles.sensorLabel}>Capacidad</p>
-                                            </div>
-                                            <p className={styles.sensorValue}>{percentage.toFixed(1)}%</p>
-                                            <p className={styles.sensorSubtext}>Nivel de llenado</p>
-                                        </div>
-
-                                        <div className={`${styles.sensorCard} ${styles.sensorCardRed}`}>
-                                            <div className={styles.sensorHeader}>
-                                                <Clock size={24} />
-                                                <p className={styles.sensorLabel}>Última Act.</p>
-                                            </div>
-                                            <p className={styles.sensorValue}>
-                                                {Math.floor((Date.now() - container.lastUpdate) / 60000)}m
-                                            </p>
-                                            <p className={styles.sensorSubtext}>hace minutos</p>
-                                        </div>
-
-                                        <div className={`${styles.sensorCard} ${styles.sensorCardGreen}`}>
-                                            <div className={styles.sensorHeader}>
-                                                <Magnet size={24} />
-                                                <p className={styles.sensorLabel}>Electroimán</p>
-                                            </div>
-                                            <p className={styles.sensorValue}>
-                                                {container.doorOpen ? 'ABIERTO' : 'CERRADO'}
-                                            </p>
-                                            <p className={styles.sensorSubtext}>Estado actual</p>
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.progressSection}>
-                                        <div className={styles.progressHeader}>
-                                            <span className={styles.progressLabel}>Llenado</span>
-                                            <span className={styles.progressValue}>{percentage.toFixed(1)}%</span>
-                                        </div>
-                                        <div className={styles.progressBar}>
-                                            <div
-                                                className={`${styles.progressFill} ${
-                                                    status === 'critical'
-                                                        ? styles.progressFillCritical
-                                                        : status === 'warning'
-                                                        ? styles.progressFillWarning
-                                                        : styles.progressFillNormal
-                                                }`}
-                                                style={{ width: `${Math.min(percentage, 100)}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={styles.detailPanel}>
-                            <h2 className={styles.detailTitle}>Detalles: {container.name}</h2>
-
-                            <div className={styles.detailGrid}>
-                                <div className={styles.infoBox}>
-                                    <h4 className={styles.infoTitle}>Información del Residuo</h4>
-                                    <div className={styles.infoList}>
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Tipo:</span>
-                                            <span className={styles.infoValue}>{container.type}</span>
-                                        </div>
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Ubicación:</span>
-                                            <span className={styles.infoValue}>{container.location}</span>
-                                        </div>
-                                        <div className={styles.infoRow}>
-                                            <span className={styles.infoLabel}>Capacidad Máxima:</span>
-                                            <span className={styles.infoValue}>{container.capacity} kg</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className={styles.sensorsBox}>
-                                    <h4 className={styles.sensorsTitle}>
-                                        <Activity size={20} />
-                                        Estado de Sensores
-                                    </h4>
-                                    <div className={styles.sensorsDetailGrid}>
-                                        <div className={styles.sensorDetailCard}>
-                                            <div className={styles.sensorDetailHeader}>
-                                                <Activity size={18} color="#14447C" />
-                                                <span className={styles.sensorDetailName}>Peso</span>
-                                            </div>
-                                            <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValuePurple}`}>
-                                                {container.weight.toFixed(2)} kg
-                                            </p>
-                                            <p className={styles.sensorDetailInfo}>
-                                                Celda de carga • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
-                                            </p>
-                                            <div className={`${styles.sensorDetailStatus} ${styles.sensorStatusActive}`}>
-                                                <span className={styles.sensorStatusActiveText}>● ACTIVO</span>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.sensorDetailCard}>
-                                            <div className={styles.sensorDetailHeader}>
-                                                <Droplets size={18} color="#D6D135" />
-                                                <span className={styles.sensorDetailName}>Nivel</span>
-                                            </div>
-                                            <p className={`${styles.sensorDetailValue} ${styles.sensorDetailValueViolet}`}>
-                                                {container.nivel.toFixed(1)}%
-                                            </p>
-                                            <p className={styles.sensorDetailInfo}>
-                                                Capacidad • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
-                                            </p>
-                                            <div className={`${styles.sensorDetailStatus} ${styles.sensorStatusPurple}`}>
-                                                <span className={styles.sensorStatusPurpleText}>● ACTIVO</span>
-                                            </div>
-                                        </div>
-
-                                        <div className={styles.sensorDetailCard}>
-                                            <div className={styles.sensorDetailHeader}>
-                                                <Magnet size={18} color={container.doorOpen ? '#ef4444' : '#00AD4B'} />
-                                                <span className={styles.sensorDetailName}>Magnético (Electroimán)</span>
-                                            </div>
-                                            <p
-                                                className={`${styles.sensorDetailValue} ${
-                                                    container.doorOpen ? styles.sensorDetailValueRed : styles.sensorDetailValueGreen
-                                                }`}
-                                            >
-                                                {container.doorOpen ? 'ABIERTO' : 'CERRADO'}
-                                            </p>
-                                            <p className={styles.sensorDetailInfo}>
-                                                Estado de electroimán • Actualización: {Math.floor((Date.now() - container.lastUpdate) / 1000)}s
-                                            </p>
-                                            <div
-                                                className={`${styles.sensorDetailStatus} ${
-                                                    container.doorOpen ? styles.sensorStatusAlert : styles.sensorStatusNormal
-                                                }`}
-                                            >
-                                                <span
-                                                    className={
-                                                        container.doorOpen ? styles.sensorStatusAlertText : styles.sensorStatusNormalText
-                                                    }
-                                                >
-                                                    ● {container.doorOpen ? 'ALERTA' : 'NORMAL'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className={styles.card}>
-                            <div className={styles.header}>
-                                <h1 className={styles.title}>
-                                    <Settings size={24} />
-                                    Configuración
-                                </h1>
-                            </div>
-
-                            <div className={styles.controls}>
-                                <div className={styles.controlGroup}>
-                                    <label className={styles.label}>
-                                        <span>Peso Máximo</span>
-                                        <span className={styles.value}>{config.pesoMaximo} kg</span>
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="1"
-                                        max="5"
-                                        value={config.pesoMaximo}
-                                        onChange={(e) => handleChange('pesoMaximo', Number(e.target.value))}
-                                        className={styles.slider}
-                                    />
-                                    <div className={styles.range}>
-                                        <span>1 kg</span>
-                                        <span>5 kg</span>
-                                    </div>
-                                </div>
-
-                                <div className={styles.controlGroup}>
-                                    <label className={styles.label}>
-                                        <span>Alerta de Llenado</span>
-                                        <span className={styles.value}>{config.nivelLlenado}%</span>
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="100"
-                                        value={config.nivelLlenado}
-                                        onChange={(e) => handleChange('nivelLlenado', Number(e.target.value))}
-                                        className={styles.slider}
-                                    />
-                                    <div className={styles.range}>
-                                        <span>0%</span>
-                                        <span>100%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className={styles.buttons}>
-                                <button onClick={handleSave} className={styles.saveButton}>
-                                    <Save className={styles.buttonIcon} />
-                                    Guardar
-                                </button>
-                                <button onClick={handleReset} className={styles.resetButton}>
-                                    <RotateCcw className={styles.buttonIcon} />
-                                    Restablecer
-                                </button>
-                            </div>
-
-                            {saved && (
-                                <div className={styles.successMessage}>
-                                    Configuración guardada correctamente
-                                </div>
-                            )}
-                        </div>
-                    </>
-                )}
+                <EditContenedor
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    contenedor={selectedContenedor}
+                    onContenedorUpdated={handleContenedorUpdated}
+                />
             </div>
-
-            <AddContenedor
-                isOpen={isAddModalOpen}
-                onClose={() => setIsAddModalOpen(false)}
-                onContenedorAdded={handleContenedorAdded}
-            />
-
-            <EditContenedor
-                isOpen={isEditModalOpen}
-                onClose={() => setIsEditModalOpen(false)}
-                contenedor={selectedContenedor}
-                onContenedorUpdated={handleContenedorUpdated}
-            />
-        </div>
-    );
+        );
 };
 
 export default Configuration;

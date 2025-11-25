@@ -47,10 +47,8 @@ const Reports = () => {
         try {
             setIsLoadingAlerts(true);
             const response = await lecturasService.getAlertas(contenedorId); // ✅ Usar el ID del contenedor
-            console.log(response.data);
             const alertasTransformadas = response.data.map((alertas, index) => {
                 const fecha = new Date(alertas.timestamp);
-                console.log('Tipo recibido:', alertas.tipo, 'Tipo de dato:', typeof alertas.tipo);
                 return {
                     id: index+1,
                     fecha: fecha.toLocaleDateString('es-MX'),
@@ -61,7 +59,6 @@ const Reports = () => {
                     detalles: alertas.alerta?.mensaje || 'Sin alertas'
                 };
             });
-            console.log(alertasTransformadas);
             setAlertas(alertasTransformadas);
 
         } catch (err) {
@@ -90,7 +87,6 @@ const Reports = () => {
         try {
             const response = await contenedoresService.getOne(idContenedor);
             setContenedorFilter(response.data);
-            console.log(response.data);
         } catch (err) {
             console.error('Error cargando contenedores:', err);
         }
@@ -173,7 +169,6 @@ const Reports = () => {
                         value={selectedFilter}
                         onChange={(e) => {
                             const nuevoId = parseInt(e.target.value);
-                            console.log('🎯 Contenedor seleccionado:', nuevoId); // Debug
                             setSelectedFilter(nuevoId);
                             contenedorId(nuevoId);
                             setDateFilter(''); // Limpiar filtro de fecha al cambiar contenedor

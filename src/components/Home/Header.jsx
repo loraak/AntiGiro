@@ -53,7 +53,7 @@ const Header = () => {
                     )}
                     
                     {/* Solo admin puede ver Dispositivo */}
-                    {isAdmin && (
+                    {(isAdmin || isTecnico) && (
                         <Link to="/configuration">
                             Dispositivo
                         </Link>
