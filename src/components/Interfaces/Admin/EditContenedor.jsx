@@ -105,9 +105,6 @@ const EditContenedor = ({ isOpen, onClose, contenedor, onContenedorUpdated }) =>
                 <h2 className={styles.modalTitle}>Editar Contenedor</h2>
 
                 <div className={styles.infoBox}>
-                    <p className={styles.infoText}>
-                        <strong>ID:</strong> CONT-{contenedor.id_contenedor}
-                    </p>
                     {contenedor.actualizado_en && (
                         <p className={styles.infoText}>
                             <strong>Última actualización:</strong> {new Date(contenedor.actualizado_en).toLocaleString('es-MX')}
@@ -145,38 +142,6 @@ const EditContenedor = ({ isOpen, onClose, contenedor, onContenedorUpdated }) =>
                         value={formData.ubicacion}
                         onChange={handleChange}
                         placeholder="Ej: Edificio A - Planta Baja"
-                        className={styles.input}
-                    />
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                        Peso Máximo (kg)
-                    </label>
-                    <input
-                        type="number"
-                        name="peso_maximo"
-                        value={formData.peso_maximo}
-                        onChange={handleChange}
-                        min="1"
-                        max="100"
-                        step="0.1"
-                        className={styles.input}
-                    />
-                </div>
-
-                <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                        Nivel de Alerta (%)
-                    </label>
-                    <input
-                        type="number"
-                        name="nivel_alerta"
-                        value={formData.nivel_alerta}
-                        onChange={handleChange}
-                        min="0"
-                        max="100"
-                        step="1"
                         className={styles.input}
                     />
                 </div>

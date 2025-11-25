@@ -95,37 +95,32 @@ const Configuration = () => {
         setSaved(false);
     };
 
-    const handleSave = async () => {
-        try {
-            if (!selectedContenedorId || !selectedContenedor) {
-                alert('No hay contenedor seleccionado');
-                return;
-            }
-
-            const updatedData = {
-                nombre: selectedContenedor.nombre,
-                ubicacion: selectedContenedor.ubicacion,
-                peso_maximo: config.pesoMaximo,
-                nivel_alerta: config.nivelLlenado,
-                activo: selectedContenedor.activo ?? 1,
-                id_usuario: selectedContenedor.id_usuario
-            };
-
-            setSelectedContenedor(prev => ({
-                ...prev,
-                peso_maximo: config.pesoMaximo,
-                nivel_alerta: config.nivelLlenado
-            }));
-            
-            await loadContenedores();
-                        
-            setSaved(true);
-            setTimeout(() => setSaved(false), 2000);
-        } catch (err) {
-            console.error('Error guardando configuración:', err);
-            alert(`Error al guardar la configuración: ${err.message || 'Error desconocido'}`);
+const handleSave = async () => {
+    try {
+        if (!selectedContenedorId || !selectedContenedor) {
+            alert('No hay contenedor seleccionado');
+            return;
         }
-    };
+
+        const updatedData = {
+            ...selectedContenedor,
+            peso_maximo: config.pesoMaximo,
+            nivel_alerta: config.nivelLlenado
+        };
+
+        await contenedoresService.update(selectedContenedorId, updatedData);
+
+        setSelectedContenedor(updatedData);
+        
+        await loadContenedores();
+                    
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+        console.error('Error guardando configuración:', err);
+        alert(`Error al guardar la configuración: ${err.message || 'Error desconocido'}`);
+    }
+};
 
     const handleReset = () => {
         if (selectedContenedor) {
