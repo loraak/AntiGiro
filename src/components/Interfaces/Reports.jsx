@@ -1,6 +1,6 @@
 import styles from './Admin/Register.module.css';
 import { IoMdDownload } from "react-icons/io";
-import { FaEye, FaFilter } from "react-icons/fa";
+import { FaFilter } from "react-icons/fa";
 import { useState, useEffect } from 'react';
 import { GeneratePDF } from "./GeneratePDF";
 import { lecturasService } from '../../services/lecturasService';

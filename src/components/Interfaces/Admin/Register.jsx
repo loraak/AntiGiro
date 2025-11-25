@@ -42,12 +42,6 @@ const Register = () => {
             <div className={styles.actionsContainer}>
                 <button onClick={() => setIsModalOpen(true)}className={styles.actionButton}>Nuevo Empleado</button>
             </div> 
-            
-            {error && (
-                <div className={styles.errorBanner}>
-                    {error}
-                </div>
-            )}
 
             {isLoading ? (
                 <div className={styles.loadingContainer}>
