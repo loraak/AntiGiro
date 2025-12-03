@@ -61,5 +61,3 @@ Si quieres editar el código o probarlo en el servidor de desarrollo de React:
 ## Licencia
 
 Este proyecto es privado y propietario.
-
-```
